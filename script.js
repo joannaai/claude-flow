@@ -1032,8 +1032,8 @@ async function loadHouses() {
     const dateEl    = document.getElementById('houses-date');
 
     try {
-        // Read directly from the pre-generated static file — no API wait
-        const res  = await fetch('/houses.json?t=' + new Date().toDateString().replace(/ /g,''));
+        // Fetch from API endpoint
+        const res  = await fetch('/api/houses');
         const data = await res.json();
 
         if (dateEl) dateEl.textContent = `Today's listings — ${data.date}`;
