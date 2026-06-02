@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const cors    = require('cors');
 const https   = require('https');
@@ -303,14 +304,13 @@ app.use((err, req, res, next) => {
     res.status(500).json({ error: 'Server error', details: err.message });
 });
 
-init().then(() => {
-    app.listen(PORT, () => {
-        console.log(`Server running at http://localhost:${PORT}`);
+app.listen(PORT, () => {
+    console.log(`Server running at http://localhost:${PORT}`);
+    console.log('DATABASE_URL:', process.env.DATABASE_URL ? process.env.DATABASE_URL.substring(0, 30) + '...' : 'NOT SET');
+    init().then(() => {
+        scheduleMidnightRefresh();
+        if (process.env.RAPIDAPI_KEY) getDailyHouses().catch(e => console.error('Houses pre-fetch failed:', e.message));
+    }).catch(e => {
+        console.error('Failed to initialize database:', e.message || e);
     });
-    scheduleMidnightRefresh();
-    if (process.env.RAPIDAPI_KEY) getDailyHouses().catch(e => console.error('Houses pre-fetch failed:', e.message));
-}).catch(e => {
-    console.error('Failed to initialize database:', e.message || e);
-    console.error(e.stack);
-    process.exit(1);
 });
