@@ -1,6 +1,10 @@
 const { Pool } = require('pg');
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false });
+const isExternalDB = process.env.DATABASE_URL && !process.env.DATABASE_URL.includes('railway.internal');
+const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: isExternalDB ? { rejectUnauthorized: false } : false
+});
 
 async function init() {
     await pool.query(`

@@ -310,6 +310,7 @@ init().then(() => {
     scheduleMidnightRefresh();
     if (process.env.RAPIDAPI_KEY) getDailyHouses().catch(e => console.error('Houses pre-fetch failed:', e.message));
 }).catch(e => {
-    console.error('Failed to initialize database:', e.message);
+    console.error('Failed to initialize database:', e.message || e);
+    console.error(e.stack);
     process.exit(1);
 });
