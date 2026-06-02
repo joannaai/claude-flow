@@ -1,5 +1,8 @@
 const { Pool } = require('pg');
 
+console.log('DATABASE_URL present:', !!process.env.DATABASE_URL);
+console.log('DATABASE_URL starts with:', process.env.DATABASE_URL ? process.env.DATABASE_URL.substring(0, 20) : 'UNDEFINED');
+
 const isExternalDB = process.env.DATABASE_URL && !process.env.DATABASE_URL.includes('railway.internal');
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
