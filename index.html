@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claude Flow</title>
+    <link rel="stylesheet" href="styles.css?v=3">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="brand">
+                <h1>Claude Flow</h1>
+                <p class="tagline">Thoughts on Code & Technology</p>
+            </div>
+            <div class="header-controls">
+                <div class="search-box">
+                    <input type="text" id="search-input" placeholder="Search posts..." class="search-input">
+                    <span class="search-icon">🔍</span>
+                </div>
+                <button id="theme-toggle" class="theme-btn">🌙</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation -->
+    <nav class="nav-tabs">
+        <div class="nav-container">
+            <a href="#blog" class="nav-tab active" data-section="blog">All Posts</a>
+            <a href="#archives" class="nav-tab" data-section="archives">Archives</a>
+            <a href="#about" class="nav-tab" data-section="about">About</a>
+            <a href="#contact" class="nav-tab" data-section="contact">Contact</a>
+            <a href="#games" class="nav-tab" data-section="games">Games</a>
+            <a href="#houses" class="nav-tab" data-section="houses">Houses</a>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <!-- Blog Section -->
+        <section id="blog" class="section active">
+            <div class="section-header">
+                <h2>Latest Posts</h2>
+                <div class="filter-tags">
+                    <button class="tag-btn active" data-tag="all">All</button>
+                    <button class="tag-btn" data-tag="javascript">JavaScript</button>
+                    <button class="tag-btn" data-tag="css">CSS</button>
+                    <button class="tag-btn" data-tag="react">React</button>
+                    <button class="tag-btn" data-tag="web">Web</button>
+                </div>
+            </div>
+            <div id="posts-container" class="posts-list">
+                <!-- Posts will be inserted here -->
+            </div>
+            <div id="no-results" class="no-results" style="display: none;">
+                <p>No posts found. Try a different search or filter.</p>
+            </div>
+        </section>
+
+        <!-- Archives Section -->
+        <section id="archives" class="section">
+            <div class="section-header">
+                <h2>Post Archives</h2>
+            </div>
+            <div id="archives-container" class="archives-list">
+                <!-- Archives will be inserted here -->
+            </div>
+        </section>
+
+        <!-- About Section -->
+        <section id="about" class="section">
+            <div class="section-header">
+                <h2>About This Blog</h2>
+            </div>
+            <div class="about-box">
+                <div class="about-text">
+                    <h3>Welcome to TechFlow</h3>
+                    <p>A modern blog dedicated to web development, JavaScript, and the ever-evolving landscape of technology.</p>
+                    <p>I share in-depth tutorials, best practices, code snippets, and thoughts on tech trends. Whether you're a beginner or an experienced developer, I hope you'll find something valuable here.</p>
+                    <h4>Topics I Cover</h4>
+                    <ul>
+                        <li>🚀 JavaScript & Modern Frameworks</li>
+                        <li>🎨 CSS & Design Systems</li>
+                        <li>⚙️ Backend Development</li>
+                        <li>🛠️ Developer Tools & Productivity</li>
+                        <li>📚 Learning Resources</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Contact Section -->
+        <section id="contact" class="section">
+            <div class="section-header">
+                <h2>Get In Touch</h2>
+            </div>
+            <div class="contact-box">
+                <form class="contact-form" id="contact-form">
+                    <div class="form-row">
+                        <input type="text" id="contact-name" placeholder="Your Name" required class="form-input">
+                        <input type="email" id="contact-email" placeholder="Your Email" required class="form-input">
+                    </div>
+                    <input type="text" id="contact-subject" placeholder="Subject" required class="form-input full-width">
+                    <textarea id="contact-message" placeholder="Your message..." rows="6" required class="form-input full-width"></textarea>
+                    <button type="submit" class="submit-btn">Send Message</button>
+                </form>
+            </div>
+
+            <!-- Submissions List -->
+            <div style="margin-top: 3rem;">
+                <h3>Submitted Messages</h3>
+                <div class="submissions-controls" style="margin-bottom: 1.5rem; display: flex; gap: 1rem;">
+                    <button id="clear-btn" class="submit-btn" style="background: #ff6b6b;">Clear All</button>
+                    <button id="download-btn" class="submit-btn">Download as Text</button>
+                </div>
+                <div id="submissions-list" class="submissions-list"></div>
+                <p id="no-submissions" style="color: var(--text-tertiary); text-align: center; padding: 2rem;">No submissions yet. Fill the form above to get started!</p>
+            </div>
+        </section>
+
+        <!-- Houses Section -->
+        <section id="houses" class="section">
+            <div class="section-header">
+                <h2>🏠 DMV Deals — Below Market Value</h2>
+                <p style="color: var(--text-secondary); font-size: 0.95rem;">Top 10 homes in the DC-Maryland-Virginia area ranked by <strong>biggest discount off Zestimate</strong>. List refreshes every day.</p>
+            </div>
+            <div class="houses-meta">
+                <span id="houses-date" class="houses-date-badge"></span>
+                <span class="houses-refresh-tag">🔄 Refreshes daily</span>
+            </div>
+
+            <!-- Filter bar -->
+            <div class="houses-filter-row">
+                <div class="state-pills">
+                    <button class="state-pill active" data-state="all">All DMV</button>
+                    <button class="state-pill" data-state="DC">🏛 DC</button>
+                    <button class="state-pill" data-state="MD">🌿 Maryland</button>
+                    <button class="state-pill" data-state="VA">🔵 Virginia</button>
+                </div>
+                <select id="houses-area-select" class="houses-area-select">
+                    <option value="all">— All Areas —</option>
+                </select>
+                <span id="houses-count" class="houses-count"></span>
+            </div>
+
+            <div id="houses-container" class="houses-grid">
+                <p style="color: var(--text-tertiary); text-align: center; padding: 3rem; grid-column: 1/-1;">Loading today's listings...</p>
+            </div>
+        </section>
+    </main>
+
+    <!-- Games Section -->
+    <section id="games" class="section" style="margin: 0; padding: 0;">
+        <div class="main-content">
+            <div class="section-header">
+                <h2>🎮 Poetry Snake - Creative Game</h2>
+                <p style="color: var(--text-secondary); font-size: 0.95rem;">Eat words to create poetry! Collect 10+ words, then generate a poem and AI artwork.</p>
+            </div>
+
+            <!-- Main Game Area -->
+            <div class="game-container">
+                <div class="game-board">
+                    <canvas id="game-canvas" width="400" height="400"></canvas>
+                </div>
+
+                <div class="game-controls">
+                    <!-- Score Stats -->
+                    <div class="game-stats">
+                        <div class="stat">
+                            <span class="stat-label">Score</span>
+                            <span class="stat-value" id="current-score">0</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label">Level</span>
+                            <span class="stat-value" id="game-level">1</span>
+                        </div>
+                    </div>
+
+                    <!-- Buttons -->
+                    <div class="game-buttons">
+                        <button id="start-btn" class="submit-btn">Start Game</button>
+                        <button id="restart-btn" class="submit-btn" style="display: none; background: #ff6b6b;">Restart</button>
+                        <button id="generate-poem-btn" class="submit-btn" style="display: none; background: #4ecdc4;">Generate Poem (10+)</button>
+                    </div>
+
+                    <!-- Poetry Buffer -->
+                    <div class="poetry-buffer">
+                        <h4>Words Collected</h4>
+                        <div id="poetry-buffer-words" class="word-chips">
+                            <span style="color: var(--text-tertiary); font-size: 0.9rem;">No words yet...</span>
+                        </div>
+                        <div style="text-align: center; color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.5rem;">
+                            <span id="word-count">0</span>/10 words
+                        </div>
+                    </div>
+
+                    <!-- Power-ups Display -->
+                    <div class="powerup-display" id="powerup-display" style="display: none;">
+                        <h4>Active Power-up</h4>
+                        <div id="active-powerup" class="active-powerup"></div>
+                    </div>
+
+                    <!-- Status -->
+                    <div class="game-status" id="game-status" style="display: none;">
+                        <p style="color: #ff6b6b; font-size: 1.1rem; font-weight: 600; text-align: center; margin-top: 1rem;">GAME OVER</p>
+                    </div>
+
+                    <!-- Instructions -->
+                    <div class="game-instructions">
+                        <h4>How to Play</h4>
+                        <ul>
+                            <li><strong>Move:</strong> Arrow keys or swipe</li>
+                            <li><strong>Eat words:</strong> Different colors = different parts of speech</li>
+                            <li><strong>Collect 10+:</strong> Generate a poem with AI</li>
+                            <li><strong>Power-ups:</strong> Red squares give bonuses</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Poetry Modal -->
+            <div id="poem-modal" class="poem-modal" style="display: none;">
+                <div class="poem-modal-content">
+                    <button class="modal-close" onclick="closePoemModal()">&times;</button>
+                    <div class="poem-display">
+                        <div id="poem-text-container" class="poem-text-container">
+                            <p id="generated-poem" style="white-space: pre-wrap; line-height: 1.8;"></p>
+                        </div>
+                        <div id="poem-image-container" class="poem-image-container">
+                            <div id="image-loading" style="display: none; text-align: center; padding: 2rem;">
+                                <p style="color: var(--text-secondary); margin-bottom: 1rem;">Generating artwork...</p>
+                                <div class="spinner"></div>
+                            </div>
+                            <img id="generated-image" src="" alt="Generated artwork" style="width: 100%; border-radius: 8px; display: none;">
+                        </div>
+                    </div>
+                    <div class="poem-actions">
+                        <button class="submit-btn" onclick="savePoem()">Save & Continue</button>
+                        <button class="submit-btn" style="background: #4ecdc4;" onclick="closePoemModal()">Play More</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gallery Section -->
+            <div style="margin-top: 4rem; padding-top: 2rem; border-top: 2px solid var(--border);">
+                <h3 style="color: var(--accent); margin-bottom: 1.5rem;">📚 Poetry Gallery</h3>
+                <div id="gallery-container" class="gallery-grid">
+                    <p style="color: var(--text-tertiary); text-align: center; padding: 2rem;">No poems yet. Start playing to create your first poem!</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+
+    <!-- Modal for full post view -->
+    <div id="post-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <button class="modal-close">&times;</button>
+            <div id="modal-body"></div>
+        </div>
+    </div>
+
+    <script src="script.js?v=3"></script>
+</body>
+</html>
