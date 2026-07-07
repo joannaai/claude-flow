@@ -1024,8 +1024,10 @@ function setupGame() {
 
 // ── Houses page state ────────────────────────────────────────────────────────
 let _housesAll   = [];      // all deals loaded from houses.json (up to 50)
-let _housesState = 'all';   // active state pill: 'all' | 'DC' | 'MD' | 'VA'
-let _housesArea  = 'all';   // active area dropdown value
+let _housesState = 'all';         // active state pill: 'all' | 'DC' | 'MD' | 'VA'
+let _housesArea  = 'all';         // active area dropdown value
+let _housesLimit = 10;            // how many records to show
+let _housesSort  = 'discount_desc'; // sort order
 
 async function loadHouses() {
     const container = document.getElementById('houses-container');
@@ -1070,6 +1072,24 @@ async function loadHouses() {
             });
         });
 
+        // Wire sort dropdown
+        const sortSelect = document.getElementById('houses-sort-select');
+        if (sortSelect) {
+            sortSelect.addEventListener('change', e => {
+                _housesSort = e.target.value;
+                _renderFilteredHouses();
+            });
+        }
+
+        // Wire limit dropdown
+        const limitSelect = document.getElementById('houses-limit-select');
+        if (limitSelect) {
+            limitSelect.addEventListener('change', e => {
+                _housesLimit = e.target.value === 'all' ? Infinity : parseInt(e.target.value);
+                _renderFilteredHouses();
+            });
+        }
+
         // Wire area dropdown
         const areaSelect = document.getElementById('houses-area-select');
         if (areaSelect) {
@@ -1108,13 +1128,24 @@ function _renderFilteredHouses() {
     const container = document.getElementById('houses-container');
     const countEl   = document.getElementById('houses-count');
 
+    // Force grid layout inline — 2 cols like Redfin
+    container.style.cssText = 'display:grid;grid-template-columns:repeat(2,1fr);gap:1.5rem;align-items:start;';
+
     // Apply state + area filters
     let filtered = _housesAll;
     if (_housesState !== 'all') filtered = filtered.filter(h => h.state === _housesState);
     if (_housesArea  !== 'all') filtered = filtered.filter(h => h.area  === _housesArea);
 
-    // Show top 10 of the filtered set (already sorted by discountPct desc)
-    const top10 = filtered.slice(0, 10);
+    // Sort
+    filtered = filtered.slice().sort((a, b) => {
+        switch (_housesSort) {
+            case 'discount_asc':  return (a.discountPct||0) - (b.discountPct||0);
+            case 'price_asc':     return (parseFloat(a.listedPrice)||0) - (parseFloat(b.listedPrice)||0);
+            case 'price_desc':    return (parseFloat(b.listedPrice)||0) - (parseFloat(a.listedPrice)||0);
+            default:              return (b.discountPct||0) - (a.discountPct||0); // discount_desc
+        }
+    });
+    const top10 = _housesLimit === Infinity ? filtered : filtered.slice(0, _housesLimit);
 
     if (countEl) {
         countEl.textContent = top10.length
@@ -1129,52 +1160,59 @@ function _renderFilteredHouses() {
 
     container.innerHTML = '';
     top10.forEach((h, idx) => {
-        const rank       = idx + 1;
-        const medal      = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `#${rank}`;
-        const marketFmt  = '$' + h.marketPrice.toLocaleString();
-        const listedFmt  = '$' + h.listedPrice.toLocaleString();
-        const savingsFmt = '$' + h.savings.toLocaleString();
-        const photoSrc   = h.imageUrl
+        const rank        = idx + 1;
+        const medal       = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `#${rank}`;
+        const listed      = parseFloat(h.listedPrice)  || 0;
+        const market      = parseFloat(h.marketPrice)  || 0;
+        const savings     = parseFloat(h.savings)      || 0;
+        const discount    = parseInt(h.discountPct)    || 0;
+        const listedFmt   = '$' + listed.toLocaleString();
+        const marketFmt   = '$' + market.toLocaleString();
+        const savingsFmt  = '$' + Math.abs(savings).toLocaleString();
+        const photoSrc    = h.imageUrl
             ? `/api/house-photo?url=${encodeURIComponent(h.imageUrl)}`
             : 'https://placehold.co/600x400/e2e8f0/94a3b8?text=No+Photo';
+        const discountLabel = discount > 0
+            ? `↓${discount}% below market`
+            : discount < 0
+            ? `↑${Math.abs(discount)}% above market`
+            : 'At market value';
+        const discountColor = discount > 0 ? '#00b894' : '#d63031';
+        const hasZestimate = market > 0 && market !== listed;
+        const sqft = h.sqft ? Number(h.sqft).toLocaleString() : null;
 
         const card = document.createElement('div');
         card.className = 'house-card';
+        card.style.cssText = 'background:#fff;border-radius:12px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 2px 12px rgba(0,0,0,0.12);cursor:pointer;transition:box-shadow 0.2s,transform 0.15s;';
+        card.onmouseenter = () => { card.style.boxShadow='0 8px 30px rgba(0,0,0,0.18)'; card.style.transform='translateY(-2px)'; };
+        card.onmouseleave = () => { card.style.boxShadow='0 2px 12px rgba(0,0,0,0.12)'; card.style.transform=''; };
         card.innerHTML = `
-            <div class="house-photo-wrap">
-                <img class="house-photo" src="${photoSrc}" alt="${h.address}" loading="lazy">
-                <span class="house-rank-badge">${medal}</span>
-                <span class="house-discount-badge">-${h.discountPct}% below market</span>
+            <div style="position:relative;width:100%;height:280px;overflow:hidden;background:#e8e8e8;flex-shrink:0;">
+                <img src="${photoSrc}" alt="${h.address}" loading="lazy"
+                     style="width:100%;height:280px;object-fit:cover;object-position:center;display:block;">
+                ${discount !== 0 ? `
+                <div style="position:absolute;top:0.7rem;left:0.7rem;background:${discountColor};color:#fff;border-radius:8px;padding:0.3rem 0.7rem;display:flex;flex-direction:column;align-items:center;line-height:1.1;">
+                    <span style="font-size:1.35rem;font-weight:900;letter-spacing:-0.5px;">${discount > 0 ? discount : Math.abs(discount)}%</span>
+                    <span style="font-size:0.62rem;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;">${discount > 0 ? 'below' : 'above'} market</span>
+                </div>` : ''}
+                <span style="position:absolute;top:0.7rem;right:0.7rem;background:rgba(0,0,0,0.5);color:#fff;font-size:0.72rem;font-weight:600;padding:0.25rem 0.6rem;border-radius:20px;">${medal}</span>
             </div>
-            <div class="house-card-body">
-                <div class="house-price-row">
-                    <span class="house-listed-price">${listedFmt}</span>
-                    <span class="house-market-price">Zestimate: <s>${marketFmt}</s></span>
+            <div style="padding:1rem 1.1rem 1.2rem;display:flex;flex-direction:column;gap:0.4rem;">
+                <div style="display:flex;align-items:baseline;justify-content:space-between;gap:0.5rem;">
+                    <span style="font-size:1.45rem;font-weight:800;color:#1a1a1a;">${listedFmt}</span>
+                    ${discount !== 0 ? `<span style="font-size:0.95rem;font-weight:700;color:${discountColor};white-space:nowrap;">${discount > 0 ? '↓' : '↑'}${Math.abs(discount)}%</span>` : ''}
                 </div>
-                <div class="house-specs">
-                    <span>🛏 ${h.beds} bd</span>
-                    <span class="house-spec-divider">·</span>
-                    <span>🚿 ${h.baths} ba</span>
-                    ${h.sqft ? `<span class="house-spec-divider">·</span><span>📐 ${h.sqft.toLocaleString()} sqft</span>` : ''}
+                ${hasZestimate ? `<div style="font-size:0.78rem;color:#888;">Zestimate: <s>${marketFmt}</s>${savings > 0 ? ` &nbsp;·&nbsp; <span style="color:#00b894;font-weight:600;">save $${Math.abs(savings).toLocaleString()}</span>` : ''}</div>` : ''}
+                <div style="font-size:0.9rem;color:#333;margin-top:0.1rem;">
+                    ${h.beds ? `${h.beds} beds` : ''}${h.beds && h.baths ? ' · ' : ''}${h.baths ? `${h.baths} baths` : ''}${sqft ? ` · ${sqft} sq ft` : ''}
                 </div>
-                <div class="house-address">
-                    <h3>${h.address}</h3>
-                    <p class="house-city">${h.city}</p>
+                <div style="font-size:0.85rem;color:#555;">
+                    ${h.address || ''}, ${h.city || ''}${h.zipcode ? ' ' + h.zipcode : ''}
                 </div>
-                <div class="house-discount-bar-wrap">
-                    <div class="house-discount-bar" style="width:${Math.min(h.discountPct, 100)}%"></div>
-                    <span class="house-discount-pct">${h.discountPct}% below market</span>
-                </div>
-                <div class="house-savings-row">
-                    <span class="house-savings">Save ${savingsFmt}</span>
-                    <span class="house-days">${h.daysOnMarket}d on market</span>
-                </div>
-                <div class="house-card-header">
-                    <span class="house-type-badge">${h.type}</span>
-                </div>
-                <a class="house-zillow-btn" href="${h.detailUrl}" target="_blank" rel="noopener">
-                    View on Zillow →
-                </a>
+                ${h.type ? `<div style="font-size:0.75rem;color:#aaa;text-transform:uppercase;letter-spacing:0.05em;">${h.type}</div>` : ''}
+                ${h.detailUrl ? `<a href="${h.detailUrl}" target="_blank" rel="noopener"
+                    style="margin-top:0.5rem;font-size:0.82rem;font-weight:600;color:#1a73e8;text-decoration:none;"
+                    onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">View on Zillow →</a>` : ''}
             </div>
         `;
         container.appendChild(card);

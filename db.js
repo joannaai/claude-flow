@@ -31,9 +31,31 @@ async function init() {
         );
         CREATE TABLE IF NOT EXISTS houses_cache (
             id         SERIAL PRIMARY KEY,
-            date       TEXT NOT NULL,
+            date       TEXT NOT NULL UNIQUE,
             houses     JSONB NOT NULL,
             fetched_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+        CREATE TABLE IF NOT EXISTS houses (
+            zpid          BIGINT PRIMARY KEY,
+            address       TEXT,
+            city          TEXT,
+            state         TEXT,
+            area          TEXT,
+            type          TEXT,
+            beds          INTEGER,
+            baths         NUMERIC,
+            sqft          INTEGER,
+            listed_price  NUMERIC,
+            market_price  NUMERIC,
+            savings       NUMERIC,
+            discount_pct  INTEGER,
+            image_url     TEXT,
+            detail_url    TEXT,
+            zipcode       TEXT,
+            status        TEXT DEFAULT 'FOR_SALE',
+            first_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            scraped_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
         );
     `);
     console.log('Database tables ready');

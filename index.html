@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Claude Flow</title>
-    <link rel="stylesheet" href="styles.css?v=3">
+    <link rel="stylesheet" href="styles.css?v=7">
 </head>
 <body>
     <!-- Header -->
@@ -33,6 +33,7 @@
             <a href="#contact" class="nav-tab" data-section="contact">Contact</a>
             <a href="#games" class="nav-tab" data-section="games">Games</a>
             <a href="#houses" class="nav-tab" data-section="houses">Houses</a>
+            <a href="health-management/index.html" class="nav-tab">Health App</a>
         </div>
     </nav>
 
@@ -122,7 +123,7 @@
         <section id="houses" class="section">
             <div class="section-header">
                 <h2>🏠 DMV Deals — Below Market Value</h2>
-                <p style="color: var(--text-secondary); font-size: 0.95rem;">Top 10 homes in the DC-Maryland-Virginia area ranked by <strong>biggest discount off Zestimate</strong>. List refreshes every day.</p>
+                <p style="color: var(--text-secondary); font-size: 0.95rem;">DMV homes ranked by <strong>biggest discount off Zestimate</strong>. List refreshes every day.</p>
             </div>
             <div class="houses-meta">
                 <span id="houses-date" class="houses-date-badge"></span>
@@ -147,6 +148,20 @@
                     <option value="Rockville MD">Rockville MD</option>
                     <option value="McLean VA">McLean VA</option>
                     <option value="Fairfax VA">Fairfax VA</option>
+                </select>
+                <select id="houses-sort-select" class="houses-area-select">
+                    <option value="discount_desc">Discount: High → Low</option>
+                    <option value="discount_asc">Discount: Low → High</option>
+                    <option value="price_asc">Price: Low → High</option>
+                    <option value="price_desc">Price: High → Low</option>
+                </select>
+                <select id="houses-limit-select" class="houses-area-select">
+                    <option value="10">Show 10</option>
+                    <option value="20">Show 20</option>
+                    <option value="30">Show 30</option>
+                    <option value="50">Show 50</option>
+                    <option value="100">Show 100</option>
+                    <option value="all">Show All</option>
                 </select>
                 <span id="houses-count" class="houses-count"></span>
             </div>
@@ -268,6 +283,6 @@
         </div>
     </div>
 
-    <script src="script.js?v=3"></script>
+    <script src="script.js?v=11"></script>
 </body>
 </html>

@@ -1069,155 +1069,172 @@ body.dark-mode .nav-tabs { background: #1a1a1a; }
 
 .houses-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+    grid-template-columns: repeat(3, 1fr);
     gap: 1.5rem;
+    align-items: stretch;
+}
+@media (max-width: 1024px) {
+    .houses-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 600px) {
+    .houses-grid { grid-template-columns: 1fr; }
 }
 
-/* Card shell */
+/* ── House Card (Redfin style) ───────────────────────────────────────────── */
 .house-card {
     background: #fff;
-    border: 1px solid var(--border);
-    border-radius: 12px;
+    border-radius: 8px;
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    box-shadow: var(--shadow-sm);
+    height: 100%;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.10);
     transition: box-shadow 0.2s, transform 0.15s;
     cursor: pointer;
+    border: 1px solid #e8e8e8;
 }
-body.dark-mode .house-card { background: var(--bg-secondary); }
-.house-card:hover { box-shadow: var(--shadow-lg); transform: translateY(-3px); }
+body.dark-mode .house-card { background: var(--bg-secondary); border-color: var(--border); }
+.house-card:hover { box-shadow: 0 6px 24px rgba(0,0,0,0.15); transform: translateY(-2px); }
 
 /* Photo */
 .house-photo-wrap {
     position: relative;
-    aspect-ratio: 4/3;
+    width: 100%;
+    height: 200px;
     overflow: hidden;
-    background: var(--bg-tertiary);
+    background: #e8e8e8;
     flex-shrink: 0;
 }
-.house-photo { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.4s ease; }
-.house-card:hover .house-photo { transform: scale(1.05); }
+.house-photo {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    object-position: center;
+    display: block;
+    transition: transform 0.4s ease;
+}
+.house-card:hover .house-photo { transform: scale(1.03); }
 
-/* Rank — top left */
+/* Rank badge — bottom left of photo */
 .house-rank-badge {
     position: absolute;
-    top: 0.6rem; left: 0.6rem;
-    font-size: 1.2rem;
-    background: rgba(0,0,0,0.52);
-    backdrop-filter: blur(4px);
-    border-radius: 8px;
-    padding: 0.15rem 0.4rem;
-    color: #fff;
+    bottom: 0.6rem; left: 0.6rem;
+    font-size: 0.78rem;
     font-weight: 700;
+    background: rgba(0,0,0,0.62);
+    color: #fff;
+    padding: 0.2rem 0.55rem;
+    border-radius: 4px;
     z-index: 2;
+    letter-spacing: 0.02em;
 }
 
-/* Discount pill — top right */
+/* Discount pill — bottom right of photo */
 .house-discount-badge {
     position: absolute;
-    top: 0.6rem; right: 0.6rem;
+    bottom: 0.6rem; right: 0.6rem;
     font-size: 0.72rem;
     font-weight: 700;
     color: #fff;
-    background: var(--green);
-    padding: 0.22rem 0.65rem;
-    border-radius: 999px;
+    background: #d63031;
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
     z-index: 2;
 }
+.house-discount-badge.below { background: #00b894; }
 
 /* Card body */
 .house-card-body {
-    padding: 1rem 1.1rem 1.15rem;
+    padding: 0.85rem 1rem 1rem;
     display: flex;
     flex-direction: column;
-    gap: 0.45rem;
+    gap: 0.3rem;
     flex: 1;
 }
 
-/* Price row */
-.house-price-row { display: flex; align-items: baseline; gap: 0.55rem; flex-wrap: wrap; }
-.house-listed-price { font-size: 1.4rem; font-weight: 800; color: var(--accent); line-height: 1; }
-.house-market-price { font-size: 0.8rem; color: var(--text-tertiary); }
+/* Price */
+.house-listed-price {
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: #1a1a1a;
+    line-height: 1.2;
+}
+body.dark-mode .house-listed-price { color: var(--text-primary); }
+.house-market-price {
+    font-size: 0.8rem;
+    color: #888;
+    text-decoration: line-through;
+}
 
-/* Specs */
+/* Specs line: 4 beds · 2 baths · 2,116 sq ft */
 .house-specs {
     display: flex;
-    gap: 0.2rem;
-    font-size: 0.87rem;
-    color: var(--text-primary);
-    font-weight: 500;
     align-items: center;
+    gap: 0.15rem;
+    font-size: 0.88rem;
+    color: #333;
+    font-weight: 500;
     flex-wrap: wrap;
+    margin-top: 0.15rem;
 }
-.house-spec-divider { color: var(--border); margin: 0 0.15rem; }
+body.dark-mode .house-specs { color: var(--text-secondary); }
+.house-spec-divider { color: #bbb; margin: 0 0.2rem; }
 
 /* Address */
-.house-address h3 { font-size: 0.93rem; font-weight: 600; color: var(--text-primary); line-height: 1.3; }
-.house-city { font-size: 0.82rem; color: var(--text-tertiary); margin-top: 0.08rem; }
+.house-address { margin-top: 0.1rem; }
+.house-address h3 {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #444;
+    line-height: 1.35;
+    margin: 0;
+}
+body.dark-mode .house-address h3 { color: var(--text-secondary); }
+.house-city {
+    font-size: 0.82rem;
+    color: #888;
+    margin-top: 0.05rem;
+}
 
-/* Type + days row */
-.house-card-header { display: flex; align-items: center; justify-content: space-between; }
+/* Discount / savings row */
+.house-savings-row {
+    margin-top: 0.3rem;
+    font-size: 0.8rem;
+    color: #00b894;
+    font-weight: 600;
+}
+
+/* Type badge */
 .house-type-badge {
-    font-size: 0.7rem; font-weight: 700;
-    color: var(--text-tertiary);
-    background: var(--bg-tertiary);
-    padding: 0.12rem 0.5rem;
-    border-radius: 4px;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-}
-.house-days { font-size: 0.77rem; color: var(--text-tertiary); }
-
-/* Discount bar */
-.house-discount-bar-wrap {
-    position: relative;
-    background: var(--bg-tertiary);
-    border-radius: 999px;
-    height: 20px;
-    overflow: hidden;
-    margin-top: 0.1rem;
-}
-.house-discount-bar {
-    position: absolute; left: 0; top: 0; bottom: 0;
-    background: linear-gradient(90deg, var(--green), #4ade80);
-    border-radius: 999px;
-    transition: width 0.7s ease;
-}
-.house-discount-pct {
-    position: relative; z-index: 1;
-    font-size: 0.73rem; font-weight: 700;
-    color: var(--text-primary);
-    padding: 0 0.6rem;
-    line-height: 20px;
-    white-space: nowrap;
-}
-
-/* Savings */
-.house-savings-row { display: flex; align-items: center; justify-content: space-between; }
-.house-savings {
-    font-size: 0.82rem; color: var(--green); font-weight: 600;
-    background: var(--green-light);
-    padding: 0.18rem 0.55rem;
-    border-radius: 4px;
-}
-
-/* View on Zillow */
-.house-zillow-btn {
-    display: block;
-    text-align: center;
-    background: var(--accent);
-    color: #fff;
-    font-size: 0.85rem;
+    display: inline-block;
+    font-size: 0.68rem;
     font-weight: 700;
-    padding: 0.62rem 1rem;
-    border-radius: 8px;
-    text-decoration: none;
-    transition: background 0.2s;
-    margin-top: 0.6rem;
-    letter-spacing: 0.01em;
+    color: #888;
+    background: #f4f4f4;
+    padding: 0.1rem 0.45rem;
+    border-radius: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 0.2rem;
 }
-.house-zillow-btn:hover { background: var(--accent-dark); }
+
+/* View on Zillow link */
+.house-zillow-btn {
+    display: inline-block;
+    margin-top: auto;
+    padding-top: 0.6rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--accent);
+    text-decoration: none;
+    border-top: 1px solid #f0f0f0;
+    margin-left: -1rem;
+    margin-right: -1rem;
+    padding-left: 1rem;
+    padding-bottom: 0rem;
+    transition: background 0.15s;
+}
+.house-zillow-btn:hover { text-decoration: underline; }
 
 @media (max-width: 680px) {
     .houses-grid { grid-template-columns: 1fr; }
