@@ -29,7 +29,7 @@
         <div class="nav-container">
             <a href="#blog" class="nav-tab active" data-section="blog">All Posts</a>
             <a href="#archives" class="nav-tab" data-section="archives">Archives</a>
-            <a href="#about" class="nav-tab" data-section="about">About</a>
+            <a href="#letter" class="nav-tab" data-section="letter">Letter</a>
             <a href="#contact" class="nav-tab" data-section="contact">Contact</a>
             <a href="#games" class="nav-tab" data-section="games">Games</a>
             <a href="#houses" class="nav-tab" data-section="houses">Houses</a>
@@ -68,24 +68,108 @@
             </div>
         </section>
 
-        <!-- About Section -->
-        <section id="about" class="section">
+        <!-- Letter Section -->
+        <section id="letter" class="section">
             <div class="section-header">
-                <h2>About This Blog</h2>
+                <h2>Letters</h2>
             </div>
-            <div class="about-box">
-                <div class="about-text">
-                    <h3>Welcome to TechFlow</h3>
-                    <p>A modern blog dedicated to web development, JavaScript, and the ever-evolving landscape of technology.</p>
-                    <p>I share in-depth tutorials, best practices, code snippets, and thoughts on tech trends. Whether you're a beginner or an experienced developer, I hope you'll find something valuable here.</p>
-                    <h4>Topics I Cover</h4>
-                    <ul>
-                        <li>🚀 JavaScript & Modern Frameworks</li>
-                        <li>🎨 CSS & Design Systems</li>
-                        <li>⚙️ Backend Development</li>
-                        <li>🛠️ Developer Tools & Productivity</li>
-                        <li>📚 Learning Resources</li>
-                    </ul>
+            <div class="about-box" id="letter-form-box">
+                <div class="form-row" style="margin-bottom:1.5rem;">
+                    <select id="letter-type" class="form-input full-width">
+                        <option value="general">General Warning Letter</option>
+                        <option value="md-cv115">MD Notice of Intent — Failure to Pay Rent (DC-CV-115)</option>
+                    </select>
+                </div>
+
+                <!-- General warning letter -->
+                <form class="contact-form" id="letter-form-general">
+                    <div class="form-row">
+                        <input type="text" id="letter-recipient" placeholder="Recipient Name" required class="form-input">
+                        <input type="text" id="letter-address" placeholder="Property / Unit Address" required class="form-input">
+                    </div>
+                    <div class="form-row">
+                        <select id="letter-reason" class="form-input" required>
+                            <option value="">— Select Reason —</option>
+                            <option value="Late Rent Payment">Late Rent Payment</option>
+                            <option value="Lease Violation">Lease Violation</option>
+                            <option value="Other">Other</option>
+                        </select>
+                        <input type="month" id="letter-period" required class="form-input">
+                    </div>
+                    <textarea id="letter-details" placeholder="Additional details (e.g. amount owed, specific violation, deadline to resolve)..." rows="4" required class="form-input full-width"></textarea>
+                    <input type="text" id="letter-sender" placeholder="Your Name / Property Manager" required class="form-input full-width">
+                    <button type="submit" class="submit-btn">Generate Letter</button>
+                </form>
+
+                <!-- MD DC-CV-115 Notice of Intent to File a Complaint for Summary Ejectment (Failure to Pay Rent) -->
+                <form class="contact-form" id="letter-form-md" style="display:none;">
+                    <h4 style="color:var(--accent);">Landlord / Agent (From)</h4>
+                    <div class="form-row">
+                        <input type="text" id="md-landlord-name" placeholder="Landlord/Agent Name" required class="form-input">
+                        <input type="text" id="md-landlord-address" placeholder="Address (P.O. Box or Street)" required class="form-input">
+                    </div>
+                    <div class="form-row">
+                        <input type="text" id="md-landlord-citystatezip" placeholder="City, State, Zip" required class="form-input">
+                        <input type="tel" id="md-landlord-phone" placeholder="Telephone" required class="form-input">
+                    </div>
+                    <input type="email" id="md-landlord-email" placeholder="E-mail Address" class="form-input full-width">
+
+                    <h4 style="color:var(--accent); margin-top:1rem;">Tenant(s) (To)</h4>
+                    <div class="form-row">
+                        <input type="text" id="md-tenant1" placeholder="Tenant 1 Name" required class="form-input">
+                        <input type="text" id="md-tenant2" placeholder="Tenant 2 Name (optional)" class="form-input">
+                    </div>
+                    <div class="form-row">
+                        <input type="text" id="md-tenant-address" placeholder="Tenant Street Address" required class="form-input">
+                        <input type="text" id="md-tenant-citystatezip" placeholder="City, State, Zip" required class="form-input">
+                    </div>
+                    <div class="form-row">
+                        <input type="tel" id="md-tenant-phone" placeholder="Tenant Telephone" class="form-input">
+                        <input type="email" id="md-tenant-email" placeholder="Tenant E-mail Address" class="form-input">
+                    </div>
+
+                    <h4 style="color:var(--accent); margin-top:1rem;">Past-Due Rent</h4>
+                    <div class="form-row">
+                        <input type="number" step="0.01" id="md-rent-amount" placeholder="Rent Amount Owed ($)" required class="form-input">
+                        <input type="text" id="md-rent-period" placeholder="For the # of months/weeks" required class="form-input">
+                    </div>
+                    <div class="form-row">
+                        <input type="date" id="md-rent-from" required class="form-input" title="Period from">
+                        <input type="date" id="md-rent-to" required class="form-input" title="Period to">
+                    </div>
+
+                    <h4 style="color:var(--accent); margin-top:1rem;">Late Fees (if any)</h4>
+                    <div class="form-row">
+                        <input type="number" step="0.01" id="md-latefee-amount" placeholder="Late Fee Amount ($)" class="form-input">
+                        <input type="text" id="md-latefee-period" placeholder="For the # of months/weeks" class="form-input">
+                    </div>
+                    <div class="form-row">
+                        <input type="date" id="md-latefee-from" class="form-input" title="Period from">
+                        <input type="date" id="md-latefee-to" class="form-input" title="Period to">
+                    </div>
+
+                    <h4 style="color:var(--accent); margin-top:1rem;">Date and Method of Notice</h4>
+                    <div class="form-row">
+                        <input type="date" id="md-notice-date" required class="form-input" title="Notice date">
+                        <select id="md-delivery-method" class="form-input" required>
+                            <option value="">— Delivery Method —</option>
+                            <option value="First-class mail or mail service of mailing">First-class mail or mail service of mailing</option>
+                            <option value="Affixed to the door of the leased property">Affixed to the door of the leased property</option>
+                            <option value="Delivered electronically by e-mail message">Delivered electronically by e-mail message</option>
+                            <option value="Delivered electronically by text message">Delivered electronically by text message</option>
+                            <option value="Delivered electronically via tenant portal">Delivered electronically via tenant portal</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="submit-btn">Generate Notice</button>
+                </form>
+            </div>
+
+            <div id="letter-preview-wrapper" style="display:none; margin-top: 2rem;">
+                <div class="about-box" id="letter-preview"></div>
+                <div style="display:flex; gap:1rem; margin-top:1rem;">
+                    <button id="letter-print-btn" class="submit-btn">Print</button>
+                    <button id="letter-copy-btn" class="submit-btn" style="background:#555;">Copy to Clipboard</button>
+                    <button id="letter-pdf-btn" class="submit-btn" style="background:#2d6a4f;">Download PDF</button>
                 </div>
             </div>
         </section>
@@ -283,6 +367,7 @@
         </div>
     </div>
 
-    <script src="script.js?v=11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/3.0.1/jspdf.umd.min.js"></script>
+    <script src="script.js?v=12"></script>
 </body>
 </html>

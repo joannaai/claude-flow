@@ -1180,6 +1180,9 @@ function _renderFilteredHouses() {
         const discountColor = discount > 0 ? '#00b894' : '#d63031';
         const hasZestimate = market > 0 && market !== listed;
         const sqft = h.sqft ? Number(h.sqft).toLocaleString() : null;
+        const daysOnMarket = h.firstSeenAt
+            ? Math.max(0, Math.floor((Date.now() - new Date(h.firstSeenAt).getTime()) / 86400000))
+            : null;
 
         const card = document.createElement('div');
         card.className = 'house-card';
@@ -1196,6 +1199,7 @@ function _renderFilteredHouses() {
                     <span style="font-size:0.62rem;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;">${discount > 0 ? 'below' : 'above'} market</span>
                 </div>` : ''}
                 <span style="position:absolute;top:0.7rem;right:0.7rem;background:rgba(0,0,0,0.5);color:#fff;font-size:0.72rem;font-weight:600;padding:0.25rem 0.6rem;border-radius:20px;">${medal}</span>
+                ${daysOnMarket !== null ? `<span style="position:absolute;bottom:0.7rem;left:0.7rem;background:rgba(0,0,0,0.6);color:#fff;font-size:0.7rem;font-weight:600;padding:0.25rem 0.6rem;border-radius:20px;">${daysOnMarket} day${daysOnMarket !== 1 ? 's' : ''} on market</span>` : ''}
             </div>
             <div style="padding:1rem 1.1rem 1.2rem;display:flex;flex-direction:column;gap:0.4rem;">
                 <div style="display:flex;align-items:baseline;justify-content:space-between;gap:0.5rem;">
@@ -1219,6 +1223,296 @@ function _renderFilteredHouses() {
     });
 }
 
+function escapeLetterHtml(str) {
+    const div = document.createElement("div");
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+function buildMdNoticeHtml(d) {
+    const totalDue = (parseFloat(d.rentAmount) || 0) + (parseFloat(d.lateFeeAmount) || 0);
+    const fmt = n => "$" + Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return `
+        <div style="line-height:1.6; font-size:0.92rem;">
+            <h3 style="text-align:center; margin-bottom:0.2rem;">NOTICE OF INTENT TO FILE A COMPLAINT FOR SUMMARY EJECTMENT (Failure to Pay Rent)</h3>
+            <p style="text-align:center; margin-bottom:1.2rem;">(Real Property Article §8-401(c))</p>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
+                <div>
+                    <strong>FROM: Landlord/Agent</strong>
+                    <p style="margin:0.2rem 0;">${d.landlordName}<br>${d.landlordAddress}<br>${d.landlordCityStateZip}<br>Tel: ${d.landlordPhone}${d.landlordEmail ? "<br>Email: " + d.landlordEmail : ""}</p>
+                </div>
+                <div>
+                    <strong>TO: Tenant(s)</strong>
+                    <p style="margin:0.2rem 0;">${d.tenant1}${d.tenant2 ? ", " + d.tenant2 : ""}<br>${d.tenantAddress}<br>${d.tenantCityStateZip}${d.tenantPhone ? "<br>Tel: " + d.tenantPhone : ""}${d.tenantEmail ? "<br>Email: " + d.tenantEmail : ""}</p>
+                </div>
+            </div>
+
+            <p style="text-align:center;"><strong>THIS IS NOT A NOTICE OF EVICTION</strong></p>
+            <p>An action for repossession of the property may be initiated if the total amount listed below is not paid within 10 days after the landlord provides this notice. You have a legal right to dispute the charges.</p>
+
+            <table style="width:100%; border-collapse:collapse; margin:1rem 0;">
+                <tr><td style="border:1px solid #999; padding:0.5rem;">${fmt(d.rentAmount)} rent for the ${d.rentPeriod}</td><td style="border:1px solid #999; padding:0.5rem;">${d.rentFrom} to ${d.rentTo}</td></tr>
+                ${d.lateFeeAmount ? `<tr><td style="border:1px solid #999; padding:0.5rem;">${fmt(d.lateFeeAmount)} late fee for the ${d.lateFeePeriod}</td><td style="border:1px solid #999; padding:0.5rem;">${d.lateFeeFrom} to ${d.lateFeeTo}</td></tr>` : ""}
+                <tr><td style="border:1px solid #999; padding:0.5rem;"><strong>TOTAL</strong></td><td style="border:1px solid #999; padding:0.5rem;"><strong>${fmt(totalDue)}</strong></td></tr>
+            </table>
+            <p style="font-size:0.85rem;">*Due pursuant to the terms of your lease. *Does not include other charges related to utilities, services, other fees, fines, and court costs.</p>
+            <p style="font-size:0.85rem;">At your request, the landlord must promptly provide you an itemized accounting of debits and credits (rental ledger) showing how the amount you owe came to be.</p>
+
+            <p><strong>DATE AND METHOD OF PROVIDING NOTICE</strong></p>
+            <p>This notice is being provided to the tenant by the landlord on ${d.noticeDate} by: ${d.deliveryMethod}</p>
+
+            <div style="display:flex; justify-content:space-between; margin:1.5rem 0;">
+                <span>Date: ${d.noticeDate}</span>
+                <span>Signature: ______________________</span>
+            </div>
+
+            <div style="border:1px solid #999; padding:1rem; margin-top:1.5rem; font-size:0.85rem;">
+                <strong>RESOURCES FOR TENANTS AND LANDLORDS</strong>
+                <ul style="margin:0.5rem 0 0 1.2rem;">
+                    <li>Under the Access to Counsel in Evictions Law, all income qualified tenants will have access to an attorney. Call 211 for a referral or visit legalhelp.org for more information.</li>
+                    <li>Alternative Dispute Resolution (ADR) Office: mdcourts.gov/district/adr/home — Mediation is a conversation between the landlord and tenant facilitated by a mediator, available before and after a failure-to-pay-rent case is filed in the District Court of Maryland.</li>
+                    <li>Rental assistance may be available to both Tenants and Landlords. Visit mdcourts.gov/legalhelp/housing.</li>
+                    <li>Speak with a lawyer for free at a Maryland Court Help Center. Visit mdcourts.gov/helpcenter or call 410-260-1392.</li>
+                </ul>
+            </div>
+            <p style="text-align:right; font-size:0.75rem; color:#888; margin-top:1rem;">DC-CV-115 (Rev. 10/2024)</p>
+        </div>
+    `;
+}
+
+function buildMdNoticePdf(doc, d) {
+    const marginX = 54;
+    const maxWidth = 612 - marginX * 2;
+    let y = 50;
+
+    const writeLine = (text, opts = {}) => {
+        doc.setFont("times", opts.bold ? "bold" : "normal");
+        doc.setFontSize(opts.size || 10);
+        const lines = doc.splitTextToSize(text, opts.width || maxWidth);
+        lines.forEach(line => {
+            if (y > 740) { doc.addPage(); y = 50; }
+            const x = opts.center ? 306 - doc.getTextWidth(line) / 2 : marginX;
+            doc.text(line, x, y);
+            y += opts.lineHeight || 15;
+        });
+    };
+
+    writeLine("NOTICE OF INTENT TO FILE A COMPLAINT FOR SUMMARY EJECTMENT", { bold: true, size: 12, center: true });
+    writeLine("(Failure to Pay Rent)", { bold: true, size: 12, center: true });
+    writeLine("(Real Property Article §8-401(c))", { size: 9, center: true });
+    y += 8;
+
+    writeLine("FROM: Landlord/Agent", { bold: true });
+    writeLine(d.landlordName);
+    writeLine(d.landlordAddress);
+    writeLine(d.landlordCityStateZip + (d.landlordPhone ? "   Tel: " + d.landlordPhone : ""));
+    if (d.landlordEmail) writeLine("Email: " + d.landlordEmail);
+    y += 6;
+
+    writeLine("TO: Tenant(s)", { bold: true });
+    writeLine(d.tenant1 + (d.tenant2 ? ", " + d.tenant2 : ""));
+    writeLine(d.tenantAddress);
+    writeLine(d.tenantCityStateZip + (d.tenantPhone ? "   Tel: " + d.tenantPhone : ""));
+    if (d.tenantEmail) writeLine("Email: " + d.tenantEmail);
+    y += 10;
+
+    writeLine("THIS IS NOT A NOTICE OF EVICTION", { bold: true, center: true });
+    writeLine("An action for repossession of the property may be initiated if the total amount listed below is not paid within 10 days after the landlord provides this notice. You have a legal right to dispute the charges.");
+    y += 6;
+
+    const totalDue = (parseFloat(d.rentAmount) || 0) + (parseFloat(d.lateFeeAmount) || 0);
+    const fmt = n => "$" + Number(n || 0).toFixed(2);
+    writeLine(`${fmt(d.rentAmount)} rent for the ${d.rentPeriod}   ${d.rentFrom} to ${d.rentTo}`);
+    if (d.lateFeeAmount) writeLine(`${fmt(d.lateFeeAmount)} late fee for the ${d.lateFeePeriod}   ${d.lateFeeFrom} to ${d.lateFeeTo}`);
+    writeLine(`TOTAL: ${fmt(totalDue)}`, { bold: true });
+    y += 4;
+    writeLine("*Due pursuant to the terms of your lease. Does not include other charges related to utilities, services, other fees, fines, and court costs.", { size: 8 });
+    writeLine("At your request, the landlord must promptly provide you an itemized accounting of debits and credits (rental ledger) showing how the amount you owe came to be.", { size: 8 });
+    y += 8;
+
+    writeLine("DATE AND METHOD OF PROVIDING NOTICE", { bold: true });
+    writeLine(`This notice is being provided to the tenant by the landlord on ${d.noticeDate} by: ${d.deliveryMethod}`);
+    y += 10;
+    writeLine(`Date: ${d.noticeDate}                                    Signature: ______________________`);
+    y += 14;
+
+    writeLine("RESOURCES FOR TENANTS AND LANDLORDS", { bold: true, size: 9 });
+    writeLine("• Under the Access to Counsel in Evictions Law, all income qualified tenants will have access to an attorney. Call 211 for a referral or visit legalhelp.org.", { size: 8 });
+    writeLine("• Alternative Dispute Resolution (ADR) Office: mdcourts.gov/district/adr/home. Mediation is available before and after a failure-to-pay-rent case is filed in the District Court of Maryland.", { size: 8 });
+    writeLine("• Rental assistance may be available to both Tenants and Landlords. Visit mdcourts.gov/legalhelp/housing.", { size: 8 });
+    writeLine("• Speak with a lawyer for free at a Maryland Court Help Center. Visit mdcourts.gov/helpcenter or call 410-260-1392.", { size: 8 });
+    y += 10;
+    writeLine("DC-CV-115 (Rev. 10/2024)", { size: 7 });
+}
+
+function setupLetterForm() {
+    const typeSelect = document.getElementById("letter-type");
+    const generalForm = document.getElementById("letter-form-general");
+    const mdForm = document.getElementById("letter-form-md");
+    const previewWrapper = document.getElementById("letter-preview-wrapper");
+    const preview = document.getElementById("letter-preview");
+    const printBtn = document.getElementById("letter-print-btn");
+    const copyBtn = document.getElementById("letter-copy-btn");
+    const pdfBtn = document.getElementById("letter-pdf-btn");
+
+    let lastLetterType = null;
+    let lastLetter = null; // raw (unescaped) field values, used for PDF export
+
+    typeSelect.addEventListener("change", () => {
+        const isMd = typeSelect.value === "md-cv115";
+        generalForm.style.display = isMd ? "none" : "flex";
+        mdForm.style.display = isMd ? "flex" : "none";
+        previewWrapper.style.display = "none";
+    });
+
+    generalForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+
+        const recipientRaw = document.getElementById("letter-recipient").value;
+        const addressRaw = document.getElementById("letter-address").value;
+        const reasonRaw = document.getElementById("letter-reason").value;
+        const period = document.getElementById("letter-period").value;
+        const detailsRaw = document.getElementById("letter-details").value;
+        const senderRaw = document.getElementById("letter-sender").value;
+
+        const periodLabel = period
+            ? (() => {
+                const [y, m] = period.split("-").map(Number);
+                return new Date(y, m - 1, 1).toLocaleDateString(undefined, { year: "numeric", month: "long" });
+            })()
+            : "";
+        const today = new Date().toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
+
+        lastLetterType = "general";
+        lastLetter = { recipient: recipientRaw, address: addressRaw, reason: reasonRaw, periodLabel, details: detailsRaw, sender: senderRaw, today };
+
+        const recipient = escapeLetterHtml(recipientRaw);
+        const address = escapeLetterHtml(addressRaw);
+        const reason = escapeLetterHtml(reasonRaw);
+        const details = escapeLetterHtml(detailsRaw);
+        const sender = escapeLetterHtml(senderRaw);
+
+        preview.innerHTML = `
+            <div style="line-height:1.8;">
+                <p>${today}</p>
+                <p>${recipient}<br>${address}</p>
+                <p><strong>Re: Warning Notice — ${reason}${periodLabel ? " (" + periodLabel + ")" : ""}</strong></p>
+                <p>Dear ${recipient},</p>
+                <p>This letter serves as formal notice regarding <strong>${reason.toLowerCase()}</strong> for the period of ${periodLabel}.</p>
+                <p>${details.replace(/\n/g, "<br>")}</p>
+                <p>Please address this matter promptly. Failure to do so may result in further action as outlined in your lease agreement.</p>
+                <p>Sincerely,<br>${sender}</p>
+            </div>
+        `;
+        previewWrapper.style.display = "block";
+        previewWrapper.scrollIntoView({ behavior: "smooth" });
+    });
+
+    mdForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+
+        const val = id => document.getElementById(id).value;
+        const d = {
+            landlordName: val("md-landlord-name"),
+            landlordAddress: val("md-landlord-address"),
+            landlordCityStateZip: val("md-landlord-citystatezip"),
+            landlordPhone: val("md-landlord-phone"),
+            landlordEmail: val("md-landlord-email"),
+            tenant1: val("md-tenant1"),
+            tenant2: val("md-tenant2"),
+            tenantAddress: val("md-tenant-address"),
+            tenantCityStateZip: val("md-tenant-citystatezip"),
+            tenantPhone: val("md-tenant-phone"),
+            tenantEmail: val("md-tenant-email"),
+            rentAmount: val("md-rent-amount"),
+            rentPeriod: val("md-rent-period"),
+            rentFrom: val("md-rent-from"),
+            rentTo: val("md-rent-to"),
+            lateFeeAmount: val("md-latefee-amount"),
+            lateFeePeriod: val("md-latefee-period"),
+            lateFeeFrom: val("md-latefee-from"),
+            lateFeeTo: val("md-latefee-to"),
+            noticeDate: val("md-notice-date"),
+            deliveryMethod: val("md-delivery-method"),
+        };
+
+        lastLetterType = "md-cv115";
+        lastLetter = d;
+
+        // Escape all user-entered text fields before rendering as HTML
+        const escaped = {};
+        Object.keys(d).forEach(k => { escaped[k] = escapeLetterHtml(String(d[k] ?? "")); });
+
+        preview.innerHTML = buildMdNoticeHtml(escaped);
+        previewWrapper.style.display = "block";
+        previewWrapper.scrollIntoView({ behavior: "smooth" });
+    });
+
+    printBtn.addEventListener("click", () => {
+        window.print();
+    });
+
+    copyBtn.addEventListener("click", async () => {
+        try {
+            await navigator.clipboard.writeText(preview.innerText);
+            alert("Letter copied to clipboard.");
+        } catch (err) {
+            alert("Could not copy — please select and copy manually.");
+        }
+    });
+
+    pdfBtn.addEventListener("click", () => {
+        if (!lastLetter) { alert("Generate the letter first."); return; }
+        if (!window.jspdf) { alert("PDF library failed to load — check your internet connection."); return; }
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ unit: "pt", format: "letter" });
+        doc.setFont("times", "normal");
+        doc.setFontSize(12);
+
+        let safeName = "letter";
+
+        if (lastLetterType === "md-cv115") {
+            buildMdNoticePdf(doc, lastLetter);
+            safeName = "md-notice-" + (lastLetter.tenant1 || "tenant");
+        } else {
+            const marginX = 60;
+            const maxWidth = 612 - marginX * 2;
+            const lineHeight = 18;
+            let y = 60;
+
+            const writeLine = (text, bold = false) => {
+                doc.setFont("times", bold ? "bold" : "normal");
+                const lines = doc.splitTextToSize(text, maxWidth);
+                lines.forEach(line => {
+                    if (y > 740) { doc.addPage(); y = 60; }
+                    doc.text(line, marginX, y);
+                    y += lineHeight;
+                });
+            };
+
+            const { recipient, address, reason, periodLabel, details, sender, today } = lastLetter;
+            const periodSuffix = periodLabel ? ` (${periodLabel})` : "";
+
+            writeLine(today); y += lineHeight / 2;
+            writeLine(recipient);
+            writeLine(address); y += lineHeight / 2;
+            writeLine(`Re: Warning Notice — ${reason}${periodSuffix}`, true); y += lineHeight / 2;
+            writeLine(`Dear ${recipient},`); y += lineHeight / 2;
+            writeLine(`This letter serves as formal notice regarding ${reason.toLowerCase()} for the period of ${periodLabel}.`); y += lineHeight / 2;
+            writeLine(details); y += lineHeight / 2;
+            writeLine("Please address this matter promptly. Failure to do so may result in further action as outlined in your lease agreement."); y += lineHeight / 2;
+            writeLine("Sincerely,");
+            writeLine(sender);
+            safeName = "warning-letter-" + (recipient || "letter");
+        }
+
+        safeName = safeName.replace(/[^a-z0-9]+/gi, "_").replace(/^_+|_+$/g, "") || "letter";
+        doc.save(`${safeName}.pdf`);
+    });
+}
+
 document.addEventListener("DOMContentLoaded", () => {
     renderPosts();
     setupNavigation();
@@ -1227,5 +1521,6 @@ document.addEventListener("DOMContentLoaded", () => {
     setupTheme();
     setupModal();
     setupContactForm();
+    setupLetterForm();
     setupGame();
 });

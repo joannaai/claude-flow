@@ -1319,3 +1319,19 @@ body.dark-mode .house-address h3 { color: var(--text-secondary); }
     .houses-area-select { min-width: 140px; }
     .houses-count { margin-left: 0; width: 100%; }
 }
+
+/* Letter print output — only the generated letter should appear on the printed page */
+@media print {
+    body * {
+        visibility: hidden;
+    }
+    #letter-preview, #letter-preview * {
+        visibility: visible;
+    }
+    #letter-preview {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+    }
+}
