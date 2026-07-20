@@ -3,15 +3,17 @@ const express    = require('express');
 const cors       = require('cors');
 const https      = require('https');
 const path       = require('path');
-const puppeteer        = require('puppeteer-extra');
-const StealthPlugin    = require('puppeteer-extra-plugin-stealth');
-puppeteer.use(StealthPlugin());
 const { pool, init } = require('./db');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
+app.use((req, res, next) => {
+    // Allow the Zillow-page ingest script (public HTTPS origin) to reach this private/loopback server
+    res.setHeader('Access-Control-Allow-Private-Network', 'true');
+    next();
+});
 app.use(express.json());
 app.use(express.static('.'));
 
@@ -23,75 +25,58 @@ const DMV_LOCATIONS = [
 
 // ── Houses ───────────────────────────────────────────────────────────────────
 
-const ZILLOW_SEARCH_URLS = {
-    'Washington DC': 'https://www.zillow.com/washington-dc/homes/for_sale/',
-    'Arlington VA':  'https://www.zillow.com/arlington-va/homes/for_sale/',
-    'Alexandria VA': 'https://www.zillow.com/alexandria-va/homes/for_sale/',
-    'McLean VA':     'https://www.zillow.com/mclean-va/homes/for_sale/',
-    'Fairfax VA':    'https://www.zillow.com/fairfax-va/homes/for_sale/',
-    'Bethesda MD':   'https://www.zillow.com/bethesda-md/homes/for_sale/',
-    'Silver Spring MD': 'https://www.zillow.com/silver-spring-md/homes/for_sale/',
-    'Rockville MD':  'https://www.zillow.com/rockville-md/homes/for_sale/',
-};
-
-async function scrapeZillowLocation(browser, area, url) {
-    const page = await browser.newPage();
-    try {
-        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
-        await page.setExtraHTTPHeaders({ 'Accept-Language': 'en-US,en;q=0.9' });
-        await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
-        await new Promise(r => setTimeout(r, 2000));
-
-        // Extract listings from Zillow's embedded __NEXT_DATA__ JSON
-        const listings = await page.evaluate(() => {
-            try {
-                const raw = document.getElementById('__NEXT_DATA__');
-                if (!raw) return [];
-                const json = JSON.parse(raw.textContent);
-                const results = json?.props?.pageProps?.searchPageState?.cat1?.searchResults?.listResults || [];
-                return results.map(h => ({
-                    zpid:         h.zpid,
-                    address:      h.addressStreet,
-                    city:         h.addressCity,
-                    state:        h.addressState,
-                    zipcode:      h.addressZipcode,
-                    price:        h.unformattedPrice,
-                    zestimate:    h.zestimate,
-                    beds:         h.beds,
-                    baths:        h.baths,
-                    sqft:         h.area,
-                    homeType:     h.homeType,
-                    imageUrl:     h.imgSrc,
-                    detailUrl:    h.detailUrl ? 'https://www.zillow.com' + h.detailUrl : null,
-                    status:       h.statusType || 'FOR_SALE',
-                }));
-            } catch (_) { return []; }
+function fetchListingsForArea(location, apiKey) {
+    return new Promise((resolve) => {
+        const query = new URLSearchParams({ location, status: 'FOR_SALE', sort: 'price_low', limit: '40' });
+        const options = {
+            hostname: 'real-estate101.p.rapidapi.com',
+            path: `/api/search?${query}`,
+            method: 'GET',
+            headers: { 'x-rapidapi-host': 'real-estate101.p.rapidapi.com', 'x-rapidapi-key': apiKey }
+        };
+        const req = https.request(options, res => {
+            let body = '';
+            res.on('data', d => body += d);
+            res.on('end', () => {
+                try {
+                    const results = JSON.parse(body).results || [];
+                    resolve(results.map(h => ({
+                        zpid:      h.id,
+                        address:   h.address?.street,
+                        city:      h.address?.city,
+                        state:     h.address?.state,
+                        zipcode:   h.address?.zipcode,
+                        price:     h.unformattedPrice,
+                        zestimate: h.zestimate || h.taxAssessedValue,
+                        beds:      h.beds,
+                        baths:     h.baths,
+                        sqft:      h.livingArea || h.area,
+                        homeType:  h.homeType,
+                        imageUrl:  h.imgSrc,
+                        detailUrl: h.detailUrl,
+                        status:    h.homeStatus || 'FOR_SALE',
+                    })));
+                } catch (_) { resolve([]); }
+            });
         });
-
-        console.log(`  ${area}: ${listings.length} listings`);
-        return listings.map(h => ({ ...h, area }));
-    } catch (e) {
-        console.error(`  ${area} failed: ${e.message}`);
-        return [];
-    } finally {
-        await page.close();
-    }
+        req.on('error', () => resolve([]));
+        req.end();
+    });
 }
 
 async function fetchListings() {
-    const all = [];
-    for (const [area, url] of Object.entries(ZILLOW_SEARCH_URLS)) {
-        // Fresh browser per location to avoid session-based detection
-        const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] });
-        try {
-            const results = await scrapeZillowLocation(browser, area, url);
-            all.push(...results);
-        } finally {
-            await browser.close();
-        }
-        await new Promise(r => setTimeout(r, 5000 + Math.random() * 5000)); // random 5-10s delay
-    }
-    return all;
+    const apiKey = process.env.RAPIDAPI_KEY;
+    if (!apiKey) throw new Error('RAPIDAPI_KEY environment variable not set');
+
+    const results = await Promise.all(
+        DMV_LOCATIONS.map(area =>
+            fetchListingsForArea(area, apiKey).then(list => {
+                console.log(`  ${area}: ${list.length} listings`);
+                return list.map(h => ({ ...h, area }));
+            })
+        )
+    );
+    return results.flat();
 }
 
 function formatHomeType(t) {
@@ -105,13 +90,14 @@ async function getDailyHouses() {
     const cached = await pool.query('SELECT * FROM houses_cache WHERE date = $1 LIMIT 1', [today]);
     if (cached.rows.length > 0) return { date: today, houses: cached.rows[0].houses };
 
-    // Serve top 10 from houses table while waiting for fresh API pull
+    // Serve everything from the houses table while waiting for a fresh API pull —
+    // the frontend's own "Show N / Show All" dropdown handles display limits.
     const existing = await pool.query(`
         SELECT zpid AS id, address, city, state, area, type, beds, baths, sqft,
                zipcode, listed_price AS "listedPrice", market_price AS "marketPrice",
                savings, discount_pct AS "discountPct", image_url AS "imageUrl",
-               detail_url AS "detailUrl", status, scraped_at, updated_at
-        FROM houses ORDER BY discount_pct DESC LIMIT 100
+               detail_url AS "detailUrl", status, first_seen_at AS "firstSeenAt", scraped_at, updated_at
+        FROM houses ORDER BY discount_pct DESC
     `);
     if (existing.rows.length > 0) return { date: today, houses: existing.rows };
 
@@ -165,26 +151,36 @@ async function getDailyHouses() {
             h.listedPrice, h.marketPrice, h.savings, h.discountPct, h.imageUrl, h.detailUrl, h.status]);
     }
 
-    // Read top 10 from DB sorted by discount
+    // Read everything from DB sorted by discount
     const rows = await pool.query(`
         SELECT zpid AS id, address, city, state, area, type, beds, baths, sqft,
                zipcode, listed_price AS "listedPrice", market_price AS "marketPrice",
                savings, discount_pct AS "discountPct", image_url AS "imageUrl",
-               detail_url AS "detailUrl", status, scraped_at, updated_at
+               detail_url AS "detailUrl", status, first_seen_at AS "firstSeenAt", scraped_at, updated_at
         FROM houses
         ORDER BY discount_pct DESC
-        LIMIT 10
     `);
 
-    const top10 = rows.rows;
-    console.log(`Upserted ${deals.length} listings, serving top ${top10.length} from DB`);
-    await pool.query('INSERT INTO houses_cache (date, houses) VALUES ($1, $2) ON CONFLICT (date) DO NOTHING', [today, JSON.stringify(top10)]);
-    return { date: today, houses: top10 };
+    const allHouses = rows.rows;
+    console.log(`Upserted ${deals.length} listings, serving ${allHouses.length} from DB`);
+    await pool.query('INSERT INTO houses_cache (date, houses) VALUES ($1, $2) ON CONFLICT (date) DO NOTHING', [today, JSON.stringify(allHouses)]);
+    return { date: today, houses: allHouses };
 }
 
 app.get('/api/houses', async (req, res) => {
     try { res.json(await getDailyHouses()); }
     catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Manual ingest: accepts listings extracted from a real browser session and upserts them
+app.post('/api/houses/ingest', async (req, res) => {
+    try {
+        const { area, listings } = req.body;
+        if (!area || !Array.isArray(listings)) return res.status(400).json({ error: 'area and listings[] required' });
+        const result = await upsertListings(listings.map(h => ({ ...h, area })));
+        console.log(`  [manual ingest] ${area}: ${result.total} total, ${result.newCount} new, ${result.updatedCount} updated`);
+        res.json(result);
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 async function upsertListings(allResults) {
@@ -229,30 +225,25 @@ async function upsertListings(allResults) {
     return { total: deals.length, newCount, updatedCount };
 }
 
-// Force a fresh Zillow scrape regardless of cache
+// Force a fresh listings pull regardless of cache
 app.post('/api/houses/scrape', async (req, res) => {
-    res.json({ message: 'Scrape started — check /api/houses/log for history' });
+    res.json({ message: 'Scrape started — check server logs for progress' });
     try {
         const today = new Date().toDateString();
         await pool.query('DELETE FROM houses_cache WHERE date = $1', [today]);
         console.log('Manual scrape triggered...');
 
-        for (const [area, url] of Object.entries(ZILLOW_SEARCH_URLS)) {
-            // Fresh browser per location to avoid session-based detection
-            const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] });
-            try {
-                const results = await scrapeZillowLocation(browser, area, url);
-                const { total, newCount, updatedCount } = await upsertListings(results.map(h => ({ ...h, area })));
-                console.log(`  ${area}: ${total} total, ${newCount} new, ${updatedCount} updated`);
-            } finally {
-                await browser.close();
-            }
-            await new Promise(r => setTimeout(r, 5000 + Math.random() * 5000));
-        }
+        const apiKey = process.env.RAPIDAPI_KEY;
+        if (!apiKey) throw new Error('RAPIDAPI_KEY environment variable not set');
+
+        await Promise.all(DMV_LOCATIONS.map(async area => {
+            const list = await fetchListingsForArea(area, apiKey);
+            const { total, newCount, updatedCount } = await upsertListings(list.map(h => ({ ...h, area })));
+            console.log(`  ${area}: ${total} total, ${newCount} new, ${updatedCount} updated`);
+        }));
         console.log('Scrape complete');
     } catch (e) {
         console.error('Scrape error:', e.message);
-        console.error('Scrape failed:', e.message);
     }
 });
 
