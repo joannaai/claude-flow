@@ -1299,9 +1299,22 @@ function setupLetterForm() {
     const todayIso = `${yyyy}-${mm}-${dd}`;
     document.getElementById("md-notice-date").value = todayIso;
     document.getElementById("md-rent-to").value = todayIso;
+    document.getElementById("md-latefee-to").value = todayIso;
 
     mdForm.addEventListener("submit", (e) => {
         e.preventDefault();
+
+        // Rent-owed-from date = the 1st of the month, N months before today
+        const rentCountNum = parseInt(document.getElementById("md-rent-count").value, 10) || 0;
+        const rentFromDate = new Date();
+        rentFromDate.setDate(1); // set day first to avoid day-overflow when shifting months
+        rentFromDate.setMonth(rentFromDate.getMonth() - rentCountNum);
+        const rfYyyy = rentFromDate.getFullYear();
+        const rfMm = String(rentFromDate.getMonth() + 1).padStart(2, "0");
+        document.getElementById("md-rent-from").value = `${rfYyyy}-${rfMm}-01`;
+
+        // Late-fee months owed always mirrors the past-due rent months
+        document.getElementById("md-latefee-count").value = document.getElementById("md-rent-count").value;
 
         const val = id => document.getElementById(id).value;
         const d = {

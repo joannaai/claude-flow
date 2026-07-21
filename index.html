@@ -99,34 +99,20 @@
                     <h4 style="color:var(--accent); margin-top:1rem;">Past-Due Rent</h4>
                     <div class="form-row">
                         <input type="number" step="0.01" id="md-rent-amount" placeholder="Rent Amount Owed ($)" required class="form-input">
-                        <input type="number" id="md-rent-count" placeholder="Number of Months/Weeks" required class="form-input">
+                        <input type="number" id="md-rent-count" placeholder="Number of Months" required class="form-input">
                     </div>
-                    <div class="form-row">
-                        <select id="md-rent-unit" class="form-input" required>
-                            <option value="months">Months</option>
-                            <option value="weeks">Weeks</option>
-                        </select>
-                    </div>
-                    <div class="form-row">
-                        <input type="date" id="md-rent-from" required class="form-input" title="Period from">
-                    </div>
+                    <input type="hidden" id="md-rent-unit" value="months">
+                    <input type="hidden" id="md-rent-from">
                     <input type="hidden" id="md-rent-to">
 
                     <h4 style="color:var(--accent); margin-top:1rem;">Late Fees (if any)</h4>
                     <div class="form-row">
                         <input type="number" step="0.01" id="md-latefee-amount" placeholder="Late Fee Amount ($)" class="form-input">
-                        <input type="number" id="md-latefee-count" placeholder="Number of Months/Weeks" class="form-input">
-                    </div>
-                    <div class="form-row">
-                        <select id="md-latefee-unit" class="form-input">
-                            <option value="months">Months</option>
-                            <option value="weeks">Weeks</option>
-                        </select>
-                    </div>
-                    <div class="form-row">
                         <input type="date" id="md-latefee-from" class="form-input" title="Period from">
-                        <input type="date" id="md-latefee-to" class="form-input" title="Period to">
                     </div>
+                    <input type="hidden" id="md-latefee-unit" value="months">
+                    <input type="hidden" id="md-latefee-count">
+                    <input type="hidden" id="md-latefee-to">
 
                     <input type="hidden" id="md-notice-date">
                     <input type="hidden" id="md-delivery-method" value="Delivered electronically by e-mail message">
