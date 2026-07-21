@@ -3,6 +3,8 @@ const express    = require('express');
 const cors       = require('cors');
 const https      = require('https');
 const path       = require('path');
+const fs         = require('fs');
+const { PDFDocument } = require('pdf-lib');
 const { pool, init } = require('./db');
 
 const app  = express();
@@ -267,6 +269,80 @@ app.get('/api/house-photo', (req, res) => {
         }).on('error', () => res.status(500).send('Photo unavailable'));
     }
     fetch(photoUrl);
+});
+
+// ── Letters ──────────────────────────────────────────────────────────────────
+
+function formatMonthYear(isoDate) {
+    if (!isoDate) return '';
+    const [y, m] = isoDate.split('-').map(Number);
+    return new Date(y, m - 1, 1).toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+}
+
+function formatShortDate(isoDate) {
+    if (!isoDate) return '';
+    const [y, m, d] = isoDate.split('-').map(Number);
+    return `${m}/${d}/${y}`;
+}
+
+// Fills the official Maryland DC-CV-115 form (Notice of Intent to File a Complaint
+// for Summary Ejectment — Failure to Pay Rent) with the submitted data.
+app.post('/api/letter/md-notice-pdf', async (req, res) => {
+    try {
+        const d = req.body;
+        const bytes = fs.readFileSync(path.join(__dirname, 'forms', 'dccv115.pdf'));
+        const pdfDoc = await PDFDocument.load(bytes);
+        const form = pdfDoc.getForm();
+
+        const setText = (field, value) => { if (value) form.getTextField(field).setText(String(value)); };
+        const check = (field) => form.getCheckBox(field).check();
+
+        setText('Landlord/Agent Name', d.landlordName);
+        setText('Landlord/Agent Address', d.landlordAddress);
+        setText('City, State, Zip', d.landlordCityStateZip);
+        setText('Landlord/Agent Telephone Number', d.landlordPhone);
+        setText('E-mail Address', d.landlordEmail);
+
+        setText('Tenant #1', d.tenant1);
+        setText('Tenant #2', d.tenant2);
+        setText('Tenant Address', d.tenantAddress);
+        setText('City, State, Zip_1', d.tenantCityStateZip);
+        setText('Tenant Telephone Number', d.tenantPhone);
+        setText('Tenant Email Address #1', d.tenantEmail);
+
+        const fmt = n => '$' + Number(n || 0).toFixed(2);
+        setText('Past-due rent', fmt(d.rentAmount));
+        setText('From (Day)', formatMonthYear(d.rentFrom));
+        setText('To (Day)', formatMonthYear(d.rentTo));
+        check(d.rentUnit === 'weeks' ? 'Check Box32' : 'checkbox31');
+
+        if (d.lateFeeAmount) {
+            setText('Late Fees', fmt(d.lateFeeAmount));
+            setText('From (day)_1', formatMonthYear(d.lateFeeFrom));
+            setText('to (day)_1', formatMonthYear(d.lateFeeTo));
+            check(d.lateFeeUnit === 'weeks' ? 'Check Box34' : 'Check Box33');
+        }
+
+        const total = (parseFloat(d.rentAmount) || 0) + (parseFloat(d.lateFeeAmount) || 0);
+        setText('Total Due', fmt(total));
+        setText('Date of Notice Provided', formatShortDate(d.noticeDate));
+
+        const deliveryCheckboxes = {
+            'First-class mail or mail service of mailing': ['Check Box35'],
+            'Affixed to the door of the leased property': ['Check Box36'],
+            'Delivered electronically by e-mail message': ['Check Box37', 'Check Box38'],
+            'Delivered electronically by text message': ['Check Box37', 'Check Box39'],
+            'Delivered electronically via tenant portal': ['Check Box37', 'Check Box40'],
+        };
+        (deliveryCheckboxes[d.deliveryMethod] || []).forEach(check);
+
+        const outBytes = await pdfDoc.save();
+        res.set('Content-Type', 'application/pdf');
+        res.set('Content-Disposition', 'attachment; filename="md-notice-of-intent.pdf"');
+        res.send(Buffer.from(outBytes));
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
 });
 
 // ── Contact submissions ───────────────────────────────────────────────────────
