@@ -1313,8 +1313,10 @@ function setupLetterForm() {
         const rfMm = String(rentFromDate.getMonth() + 1).padStart(2, "0");
         document.getElementById("md-rent-from").value = `${rfYyyy}-${rfMm}-01`;
 
-        // Late-fee months owed always mirrors the past-due rent months
+        // Late-fee months owed always mirrors the past-due rent months, so its
+        // from-date uses the same "1st of the month, N months back" calculation
         document.getElementById("md-latefee-count").value = document.getElementById("md-rent-count").value;
+        document.getElementById("md-latefee-from").value = `${rfYyyy}-${rfMm}-01`;
 
         const val = id => document.getElementById(id).value;
         const d = {

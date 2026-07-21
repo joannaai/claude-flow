@@ -326,6 +326,7 @@ app.post('/api/letter/md-notice-pdf', async (req, res) => {
         const total = (parseFloat(d.rentAmount) || 0) + (parseFloat(d.lateFeeAmount) || 0);
         setText('Total Due', fmt(total));
         setText('Date of Notice Provided', formatShortDate(d.noticeDate));
+        setText('Date_2', formatShortDate(d.noticeDate));
 
         const deliveryCheckboxes = {
             'First-class mail or mail service of mailing': ['Check Box35'],
