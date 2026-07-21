@@ -76,18 +76,13 @@
             <div class="about-box" id="letter-form-box">
                 <!-- MD DC-CV-115 Notice of Intent to File a Complaint for Summary Ejectment (Failure to Pay Rent) -->
                 <form class="contact-form" id="letter-form-md">
-                    <h4 style="color:var(--accent);">Landlord / Agent (From)</h4>
-                    <div class="form-row">
-                        <input type="text" id="md-landlord-name" placeholder="Landlord/Agent Name" value="Aico LLC" required class="form-input">
-                        <input type="text" id="md-landlord-address" placeholder="Address (P.O. Box or Street)" value="P.O. Box 2002" required class="form-input">
-                    </div>
-                    <div class="form-row">
-                        <input type="text" id="md-landlord-citystatezip" placeholder="City, State, Zip" value="Falls Church, VA" required class="form-input">
-                        <input type="tel" id="md-landlord-phone" placeholder="Telephone" value="3016618409" required class="form-input">
-                    </div>
-                    <input type="email" id="md-landlord-email" placeholder="E-mail Address" value="joannaaihoa2@gmail.com" class="form-input full-width">
+                    <input type="hidden" id="md-landlord-name" value="Aico LLC">
+                    <input type="hidden" id="md-landlord-address" value="P.O. Box 2002">
+                    <input type="hidden" id="md-landlord-citystatezip" value="Falls Church, VA">
+                    <input type="hidden" id="md-landlord-phone" value="3016618409">
+                    <input type="hidden" id="md-landlord-email" value="joannaaihoa2@gmail.com">
 
-                    <h4 style="color:var(--accent); margin-top:1rem;">Tenant(s) (To)</h4>
+                    <h4 style="color:var(--accent);">Tenant(s) (To)</h4>
                     <div class="form-row">
                         <input type="text" id="md-tenant1" placeholder="Tenant 1 Name" required class="form-input">
                         <input type="text" id="md-tenant2" placeholder="Tenant 2 Name (optional)" class="form-input">
@@ -114,8 +109,8 @@
                     </div>
                     <div class="form-row">
                         <input type="date" id="md-rent-from" required class="form-input" title="Period from">
-                        <input type="date" id="md-rent-to" required class="form-input" title="Period to">
                     </div>
+                    <input type="hidden" id="md-rent-to">
 
                     <h4 style="color:var(--accent); margin-top:1rem;">Late Fees (if any)</h4>
                     <div class="form-row">
@@ -133,18 +128,8 @@
                         <input type="date" id="md-latefee-to" class="form-input" title="Period to">
                     </div>
 
-                    <h4 style="color:var(--accent); margin-top:1rem;">Date and Method of Notice</h4>
-                    <div class="form-row">
-                        <input type="date" id="md-notice-date" required class="form-input" title="Notice date">
-                        <select id="md-delivery-method" class="form-input" required>
-                            <option value="">— Delivery Method —</option>
-                            <option value="First-class mail or mail service of mailing">First-class mail or mail service of mailing</option>
-                            <option value="Affixed to the door of the leased property">Affixed to the door of the leased property</option>
-                            <option value="Delivered electronically by e-mail message" selected>Delivered electronically by e-mail message</option>
-                            <option value="Delivered electronically by text message">Delivered electronically by text message</option>
-                            <option value="Delivered electronically via tenant portal">Delivered electronically via tenant portal</option>
-                        </select>
-                    </div>
+                    <input type="hidden" id="md-notice-date">
+                    <input type="hidden" id="md-delivery-method" value="Delivered electronically by e-mail message">
                     <button type="submit" class="submit-btn">Generate Notice</button>
                 </form>
             </div>

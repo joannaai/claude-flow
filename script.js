@@ -1291,13 +1291,14 @@ function setupLetterForm() {
 
     let lastLetter = null; // raw (unescaped) field values, used for PDF export
 
-    // Default the notice date to today so it never needs manual input
-    const noticeDateInput = document.getElementById("md-notice-date");
+    // Default the notice date and rent-owed-through date to today
     const todayLocal = new Date();
     const yyyy = todayLocal.getFullYear();
     const mm = String(todayLocal.getMonth() + 1).padStart(2, "0");
     const dd = String(todayLocal.getDate()).padStart(2, "0");
-    noticeDateInput.value = `${yyyy}-${mm}-${dd}`;
+    const todayIso = `${yyyy}-${mm}-${dd}`;
+    document.getElementById("md-notice-date").value = todayIso;
+    document.getElementById("md-rent-to").value = todayIso;
 
     mdForm.addEventListener("submit", (e) => {
         e.preventDefault();
