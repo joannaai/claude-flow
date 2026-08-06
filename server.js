@@ -20,6 +20,15 @@ app.use((req, res, next) => {
 app.use(express.json());
 app.use(express.static('.'));
 
+// TEMPORARY debug endpoint — reports which env vars are present without leaking values.
+// Remove once the Railway variable-injection issue is resolved.
+app.get('/api/debug-env', (req, res) => {
+    const keys = ['DATABASE_URL', 'RAPIDAPI_KEY', 'GMAIL_USER', 'GMAIL_APP_PASSWORD', 'RESEND_API_KEY', 'RESEND_FROM_EMAIL'];
+    const present = {};
+    keys.forEach(k => { present[k] = { set: !!process.env[k], length: (process.env[k] || '').length }; });
+    res.json({ commit: process.env.RAILWAY_GIT_COMMIT_SHA || null, present });
+});
+
 const DMV_LOCATIONS = [
     'Washington DC', 'Arlington VA', 'Alexandria VA',
     'Bethesda MD', 'Silver Spring MD', 'Rockville MD',
