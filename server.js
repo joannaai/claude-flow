@@ -4,6 +4,7 @@ const cors       = require('cors');
 const https      = require('https');
 const path       = require('path');
 const fs         = require('fs');
+const dns        = require('dns');
 const { PDFDocument } = require('pdf-lib');
 const nodemailer = require('nodemailer');
 const { pool, init } = require('./db');
@@ -384,19 +385,25 @@ app.post('/api/letter/md-notice-send', async (req, res) => {
             attachments: [{ filename: 'md-notice-of-intent.pdf', content: Buffer.from(outBytes) }],
         };
 
-        // smtp.gmail.com resolves to a different Google frontend IP on each lookup;
-        // some are unreachable from certain networks, so retry a few times with a
-        // short timeout to fail fast and pick up a fresh (hopefully reachable) IP.
+        // smtp.gmail.com resolves to a different Google frontend IP on each lookup,
+        // sometimes IPv6 addresses this host can't actually route to (ENETUNREACH),
+        // and some IPv4 addresses are unreachable from certain networks. Resolve to
+        // an IPv4 address ourselves and retry a few times with a short timeout to
+        // fail fast and pick up a fresh (hopefully reachable) address.
         let lastErr;
         for (let attempt = 1; attempt <= 3; attempt++) {
-            const transporter = nodemailer.createTransport({
-                host: 'smtp.gmail.com',
-                port: 587,
-                secure: false,
-                connectionTimeout: 8000,
-                auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_APP_PASSWORD },
-            });
             try {
+                const ip = await new Promise((resolve, reject) => {
+                    dns.lookup('smtp.gmail.com', { family: 4 }, (err, address) => err ? reject(err) : resolve(address));
+                });
+                const transporter = nodemailer.createTransport({
+                    host: ip,
+                    port: 587,
+                    secure: false,
+                    connectionTimeout: 8000,
+                    tls: { servername: 'smtp.gmail.com' },
+                    auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_APP_PASSWORD },
+                });
                 await transporter.sendMail(mail);
                 lastErr = null;
                 break;
