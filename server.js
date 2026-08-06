@@ -4,9 +4,8 @@ const cors       = require('cors');
 const https      = require('https');
 const path       = require('path');
 const fs         = require('fs');
-const dns        = require('dns');
 const { PDFDocument } = require('pdf-lib');
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 const { pool, init } = require('./db');
 
 const app  = express();
@@ -371,47 +370,23 @@ app.post('/api/letter/md-notice-send', async (req, res) => {
     try {
         const d = req.body;
         if (!d.tenantEmail) return res.status(400).json({ error: 'Tenant email address is required to send' });
-        if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
-            return res.status(500).json({ error: 'Email is not configured (missing GMAIL_USER/GMAIL_APP_PASSWORD)' });
+        if (!process.env.RESEND_API_KEY) {
+            return res.status(500).json({ error: 'Email is not configured (missing RESEND_API_KEY)' });
         }
 
         const outBytes = await fillMdNoticePdf(d);
 
-        const mail = {
-            from: `"${d.landlordName || 'Landlord'}" <${process.env.GMAIL_USER}>`,
+        const resend = new Resend(process.env.RESEND_API_KEY);
+        const fromAddress = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
+
+        const { error } = await resend.emails.send({
+            from: `${d.landlordName || 'Landlord'} <${fromAddress}>`,
             to: d.tenantEmail,
             subject: 'Notice of Intent to File a Complaint for Summary Ejectment (Failure to Pay Rent)',
             text: 'Please see the attached notice regarding past-due rent. This is not a notice of eviction — you have 10 days to resolve the amount due or dispute the charges. See the attached PDF for full details.',
             attachments: [{ filename: 'md-notice-of-intent.pdf', content: Buffer.from(outBytes) }],
-        };
-
-        // smtp.gmail.com resolves to a different Google frontend IP on each lookup,
-        // sometimes IPv6 addresses this host can't actually route to (ENETUNREACH),
-        // and some IPv4 addresses are unreachable from certain networks. Resolve to
-        // an IPv4 address ourselves and retry a few times with a short timeout to
-        // fail fast and pick up a fresh (hopefully reachable) address.
-        let lastErr;
-        for (let attempt = 1; attempt <= 3; attempt++) {
-            try {
-                const ip = await new Promise((resolve, reject) => {
-                    dns.lookup('smtp.gmail.com', { family: 4 }, (err, address) => err ? reject(err) : resolve(address));
-                });
-                const transporter = nodemailer.createTransport({
-                    host: ip,
-                    port: 587,
-                    secure: false,
-                    connectionTimeout: 8000,
-                    tls: { servername: 'smtp.gmail.com' },
-                    auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_APP_PASSWORD },
-                });
-                await transporter.sendMail(mail);
-                lastErr = null;
-                break;
-            } catch (err) {
-                lastErr = err;
-            }
-        }
-        if (lastErr) throw lastErr;
+        });
+        if (error) throw new Error(error.message || 'Resend failed to send the email');
 
         res.json({ success: true, sentTo: d.tenantEmail });
     } catch (e) {
