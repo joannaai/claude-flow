@@ -74,6 +74,17 @@
                 <h2>MD Notice of Intent — Failure to Pay Rent (DC-CV-115)</h2>
             </div>
             <div class="about-box" id="letter-form-box">
+                <div class="form-row" style="align-items:center; margin-bottom:1rem;">
+                    <label for="letter-state-select" style="margin:0; white-space:nowrap;">State</label>
+                    <select id="letter-state-select" class="form-input" style="max-width:220px;">
+                        <option value="MD" selected>Maryland</option>
+                        <option value="DC" disabled>DC (coming soon)</option>
+                        <option value="VA" disabled>Virginia (coming soon)</option>
+                    </select>
+                </div>
+                <p style="color: var(--text-tertiary); font-size: 0.85rem; margin-top: -0.5rem; margin-bottom: 1rem;">
+                    This DC-CV-115 notice format currently applies only to Prince George's County, Maryland.
+                </p>
                 <!-- MD DC-CV-115 Notice of Intent to File a Complaint for Summary Ejectment (Failure to Pay Rent) -->
                 <form class="contact-form" id="letter-form-md">
                     <input type="hidden" id="md-landlord-name" value="Aico LLC">
@@ -126,6 +137,7 @@
                     <button id="letter-print-btn" class="submit-btn">Print</button>
                     <button id="letter-copy-btn" class="submit-btn" style="background:#555;">Copy to Clipboard</button>
                     <button id="letter-pdf-btn" class="submit-btn" style="background:#2d6a4f;">Download PDF</button>
+                    <button id="letter-email-btn" class="submit-btn" style="background:#1a5276;">Send Email to Tenant</button>
                 </div>
             </div>
         </section>

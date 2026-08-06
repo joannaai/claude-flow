@@ -1288,6 +1288,7 @@ function setupLetterForm() {
     const printBtn = document.getElementById("letter-print-btn");
     const copyBtn = document.getElementById("letter-copy-btn");
     const pdfBtn = document.getElementById("letter-pdf-btn");
+    const emailBtn = document.getElementById("letter-email-btn");
 
     let lastLetter = null; // raw (unescaped) field values, used for PDF export
 
@@ -1390,6 +1391,32 @@ function setupLetterForm() {
             URL.revokeObjectURL(url);
         } catch (err) {
             alert('Could not generate PDF: ' + err.message);
+        }
+    });
+
+    emailBtn.addEventListener("click", async () => {
+        if (!lastLetter) { alert("Generate the notice first."); return; }
+        if (!lastLetter.tenantEmail) { alert("Enter a tenant email address before sending."); return; }
+
+        if (!confirm(`Send this notice by email to ${lastLetter.tenantEmail}?`)) return;
+
+        emailBtn.disabled = true;
+        const originalText = emailBtn.textContent;
+        emailBtn.textContent = "Sending…";
+        try {
+            const response = await fetch('/api/letter/md-notice-send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(lastLetter)
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'Server error');
+            alert(`Notice emailed to ${data.sentTo}.`);
+        } catch (err) {
+            alert('Could not send email: ' + err.message);
+        } finally {
+            emailBtn.disabled = false;
+            emailBtn.textContent = originalText;
         }
     });
 }
