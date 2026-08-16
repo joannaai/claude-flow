@@ -1354,8 +1354,8 @@ function setupLetterForm() {
         Object.entries(FORMS_BY_STATE).forEach(([state, form]) => {
             form.style.display = state === stateSelect.value ? "flex" : "none";
         });
-        // Email sending is only wired up for the official MD notice
-        emailBtn.style.display = stateSelect.value === "MD" ? "inline-block" : "none";
+        // Email sending isn't wired up for the general letter type
+        emailBtn.style.display = stateSelect.value === "general" ? "none" : "inline-block";
         previewWrapper.style.display = "none";
     });
 
@@ -1657,7 +1657,8 @@ function setupLetterForm() {
         const originalText = emailBtn.textContent;
         emailBtn.textContent = "Sending…";
         try {
-            const response = await fetch('/api/letter/md-notice-send', {
+            const endpoint = lastLetterType === "va-pay-or-quit" ? '/api/letter/va-notice-send' : '/api/letter/md-notice-send';
+            const response = await fetch(endpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(lastLetter)

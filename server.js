@@ -4,7 +4,7 @@ const cors       = require('cors');
 const https      = require('https');
 const path       = require('path');
 const fs         = require('fs');
-const { PDFDocument } = require('pdf-lib');
+const { PDFDocument, StandardFonts } = require('pdf-lib');
 const { Resend } = require('resend');
 const { pool, init } = require('./db');
 
@@ -353,6 +353,126 @@ async function fillMdNoticePdf(d) {
 
     return pdfDoc.save();
 }
+
+// Builds the Virginia 14-day pay-or-quit notice (Va. Code § 55.1-1245) from scratch —
+// there is no official state PDF form to fill, unlike Maryland's DC-CV-115.
+async function fillVaNoticePdf(d) {
+    const pdfDoc = await PDFDocument.create();
+    const font = await pdfDoc.embedFont(StandardFonts.TimesRoman);
+    const boldFont = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
+    const marginX = 54;
+    const maxWidth = 612 - marginX * 2;
+    let page = pdfDoc.addPage([612, 792]);
+    let y = 742;
+
+    const wrapText = (text, size, useFont) => {
+        const words = String(text).split(/\s+/);
+        const lines = [];
+        let current = '';
+        words.forEach(word => {
+            const test = current ? current + ' ' + word : word;
+            if (current && useFont.widthOfTextAtSize(test, size) > maxWidth) {
+                lines.push(current);
+                current = word;
+            } else {
+                current = test;
+            }
+        });
+        if (current) lines.push(current);
+        return lines;
+    };
+
+    const writeLine = (text, opts = {}) => {
+        const size = opts.size || 11;
+        const useFont = opts.bold ? boldFont : font;
+        const lineHeight = opts.lineHeight || 15;
+        wrapText(text, size, useFont).forEach(line => {
+            if (y < 50) { page = pdfDoc.addPage([612, 792]); y = 742; }
+            const x = opts.center ? (612 - useFont.widthOfTextAtSize(line, size)) / 2 : marginX;
+            page.drawText(line, { x, y, size, font: useFont });
+            y -= lineHeight;
+        });
+    };
+
+    const fmt = n => '$' + Number(n || 0).toFixed(2);
+
+    writeLine('14-DAY NOTICE TO PAY RENT OR QUIT', { bold: true, size: 13, center: true });
+    writeLine('(Nonpayment of Rent — Va. Code § 55.1-1245)', { size: 9, center: true });
+    y -= 8;
+
+    writeLine('FROM: Landlord/Agent', { bold: true });
+    writeLine(d.landlordName);
+    writeLine(d.landlordAddress);
+    writeLine(d.landlordCityStateZip + (d.landlordPhone ? '   Tel: ' + d.landlordPhone : ''));
+    if (d.landlordEmail) writeLine('Email: ' + d.landlordEmail);
+    y -= 6;
+
+    writeLine('TO: Tenant(s)', { bold: true });
+    writeLine(d.tenant1 + (d.tenant2 ? ', ' + d.tenant2 : ''));
+    writeLine(d.tenantAddress);
+    writeLine(d.tenantCityStateZip + (d.tenantPhone ? '   Tel: ' + d.tenantPhone : ''));
+    if (d.tenantEmail) writeLine('Email: ' + d.tenantEmail);
+    y -= 10;
+
+    writeLine('You are hereby notified that you have failed to pay rent as required under your rental agreement. The rent set forth below remains unpaid:');
+    y -= 4;
+    writeLine(`${fmt(d.rentAmount)} rent for the ${d.rentPeriod}   ${d.rentFrom} to ${d.rentTo}`);
+    writeLine(`TOTAL DUE: ${fmt(d.rentAmount)}`, { bold: true });
+    y -= 8;
+
+    writeLine('You have FOURTEEN (14) DAYS from the date of this notice to pay the total amount due. If the rent is not paid in full within this 14-day period, the landlord intends to terminate the rental agreement and may file an unlawful detainer action in the Prince William County General District Court to obtain possession of the premises. This notice is provided pursuant to Va. Code § 55.1-1245.', { bold: true });
+    y -= 8;
+
+    writeLine('DATE AND METHOD OF PROVIDING NOTICE', { bold: true });
+    writeLine(`This notice is being provided to the tenant by the landlord on ${d.noticeDate} by ${d.deliveryMethod}.`);
+    y -= 10;
+    writeLine(`Date: ${d.noticeDate}                                    Signature: ______________________`);
+    y -= 14;
+
+    writeLine('This is a template based on current Virginia statutory requirements and is not a substitute for advice from a Virginia-licensed attorney. Verify current requirements before relying on this notice in a legal proceeding.', { size: 8 });
+
+    return pdfDoc.save();
+}
+
+app.post('/api/letter/va-notice-pdf', async (req, res) => {
+    try {
+        const outBytes = await fillVaNoticePdf(req.body);
+        res.set('Content-Type', 'application/pdf');
+        res.set('Content-Disposition', 'attachment; filename="va-pay-or-quit-notice.pdf"');
+        res.send(Buffer.from(outBytes));
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// Emails the Virginia pay-or-quit notice as a PDF attachment directly to the tenant
+app.post('/api/letter/va-notice-send', async (req, res) => {
+    try {
+        const d = req.body;
+        if (!d.tenantEmail) return res.status(400).json({ error: 'Tenant email address is required to send' });
+        if (!process.env.RESEND_API_KEY) {
+            return res.status(500).json({ error: 'Email is not configured (missing RESEND_API_KEY)' });
+        }
+
+        const outBytes = await fillVaNoticePdf(d);
+
+        const resend = new Resend(process.env.RESEND_API_KEY);
+        const fromAddress = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
+
+        const { error } = await resend.emails.send({
+            from: `${d.landlordName || 'Landlord'} <${fromAddress}>`,
+            to: d.tenantEmail,
+            subject: '14-Day Notice to Pay Rent or Quit',
+            text: 'Please see the attached 14-day notice regarding past-due rent, provided pursuant to Va. Code § 55.1-1245. See the attached PDF for full details.',
+            attachments: [{ filename: 'va-pay-or-quit-notice.pdf', content: Buffer.from(outBytes) }],
+        });
+        if (error) throw new Error(error.message || 'Resend failed to send the email');
+
+        res.json({ success: true, sentTo: d.tenantEmail });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
 
 app.post('/api/letter/md-notice-pdf', async (req, res) => {
     try {
