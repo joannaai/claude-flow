@@ -287,6 +287,58 @@ function formatShortDate(isoDate) {
     return `${m}/${d}/${y}`;
 }
 
+// Plain-text version of the MD notice content, used as the email body so the tenant
+// sees the full notice inline rather than only in the PDF attachment.
+function buildMdNoticeText(d) {
+    const fmt = n => '$' + Number(n || 0).toFixed(2);
+    const total = (parseFloat(d.rentAmount) || 0) + (parseFloat(d.lateFeeAmount) || 0);
+    const lines = [
+        'NOTICE OF INTENT TO FILE A COMPLAINT FOR SUMMARY EJECTMENT (Failure to Pay Rent)',
+        '(Real Property Article §8-401(c))',
+        '',
+        'FROM: Landlord/Agent',
+        d.landlordName,
+        d.landlordAddress,
+        d.landlordCityStateZip,
+        d.landlordPhone ? `Tel: ${d.landlordPhone}` : '',
+        d.landlordEmail ? `Email: ${d.landlordEmail}` : '',
+        '',
+        'TO: Tenant(s)',
+        d.tenant1 + (d.tenant2 ? ', ' + d.tenant2 : ''),
+        d.tenantAddress,
+        d.tenantCityStateZip,
+        d.tenantPhone ? `Tel: ${d.tenantPhone}` : '',
+        d.tenantEmail ? `Email: ${d.tenantEmail}` : '',
+        '',
+        'THIS IS NOT A NOTICE OF EVICTION',
+        'An action for repossession of the property may be initiated if the total amount listed below is not paid within 10 days after the landlord provides this notice. You have a legal right to dispute the charges.',
+        '',
+        `${fmt(d.rentAmount)} rent for the ${formatMonthYear(d.rentFrom)} to ${formatMonthYear(d.rentTo)}`,
+        d.lateFeeAmount ? `${fmt(d.lateFeeAmount)} late fee for the ${formatMonthYear(d.lateFeeFrom)} to ${formatMonthYear(d.lateFeeTo)}` : '',
+        `TOTAL: ${fmt(total)}`,
+        '',
+        '*Due pursuant to the terms of your lease. Does not include other charges related to utilities, services, other fees, fines, and court costs.',
+        'At your request, the landlord must promptly provide you an itemized accounting of debits and credits (rental ledger) showing how the amount you owe came to be.',
+        '',
+        'DATE AND METHOD OF PROVIDING NOTICE',
+        `This notice is being provided to the tenant by the landlord on ${formatShortDate(d.noticeDate)} by: ${d.deliveryMethod}`,
+        '',
+        `Date: ${formatShortDate(d.noticeDate)}`,
+        'Signature: (see attached signed PDF)',
+        '',
+        'RESOURCES FOR TENANTS AND LANDLORDS',
+        '- Under the Access to Counsel in Evictions Law, all income qualified tenants will have access to an attorney. Call 211 for a referral or visit legalhelp.org.',
+        '- Alternative Dispute Resolution (ADR) Office: mdcourts.gov/district/adr/home. Mediation is available before and after a failure-to-pay-rent case is filed in the District Court of Maryland.',
+        '- Rental assistance may be available to both Tenants and Landlords. Visit mdcourts.gov/legalhelp/housing.',
+        '- Speak with a lawyer for free at a Maryland Court Help Center. Visit mdcourts.gov/helpcenter or call 410-260-1392.',
+        '',
+        'DC-CV-115 (Rev. 10/2024)',
+        '',
+        'A signed PDF copy of this notice is also attached.',
+    ];
+    return lines.filter(l => l !== undefined).join('\n');
+}
+
 // Fills the official Maryland DC-CV-115 form (Notice of Intent to File a Complaint
 // for Summary Ejectment — Failure to Pay Rent) with the submitted data. Returns PDF bytes.
 async function fillMdNoticePdf(d) {
@@ -353,6 +405,48 @@ async function fillMdNoticePdf(d) {
     });
 
     return pdfDoc.save();
+}
+
+// Plain-text version of the VA notice content, used as the email body so the tenant
+// sees the full notice inline rather than only in the PDF attachment.
+function buildVaNoticeText(d) {
+    const fmt = n => '$' + Number(n || 0).toFixed(2);
+    const lines = [
+        '14-DAY NOTICE TO PAY RENT OR QUIT',
+        '(Nonpayment of Rent — Va. Code § 55.1-1245)',
+        '',
+        'FROM: Landlord/Agent',
+        d.landlordName,
+        d.landlordAddress,
+        d.landlordCityStateZip,
+        d.landlordPhone ? `Tel: ${d.landlordPhone}` : '',
+        d.landlordEmail ? `Email: ${d.landlordEmail}` : '',
+        '',
+        'TO: Tenant(s)',
+        d.tenant1 + (d.tenant2 ? ', ' + d.tenant2 : ''),
+        d.tenantAddress,
+        d.tenantCityStateZip,
+        d.tenantPhone ? `Tel: ${d.tenantPhone}` : '',
+        d.tenantEmail ? `Email: ${d.tenantEmail}` : '',
+        '',
+        'You are hereby notified that you have failed to pay rent as required under your rental agreement. The rent set forth below remains unpaid:',
+        '',
+        `${fmt(d.rentAmount)} rent for the ${d.rentPeriod}   ${d.rentFrom} to ${d.rentTo}`,
+        `TOTAL DUE: ${fmt(d.rentAmount)}`,
+        '',
+        'You have FOURTEEN (14) DAYS from the date of this notice to pay the total amount due. If the rent is not paid in full within this 14-day period, the landlord intends to terminate the rental agreement and may file an unlawful detainer action in the Prince William County General District Court to obtain possession of the premises. This notice is provided pursuant to Va. Code § 55.1-1245.',
+        '',
+        'DATE AND METHOD OF PROVIDING NOTICE',
+        `This notice is being provided to the tenant by the landlord on ${d.noticeDate} by ${d.deliveryMethod}.`,
+        '',
+        `Date: ${d.noticeDate}`,
+        'Signature: (see attached signed PDF)',
+        '',
+        'This is a template based on current Virginia statutory requirements and is not a substitute for advice from a Virginia-licensed attorney. Verify current requirements before relying on this notice in a legal proceeding.',
+        '',
+        'A signed PDF copy of this notice is also attached.',
+    ];
+    return lines.filter(l => l !== undefined).join('\n');
 }
 
 // Builds the Virginia 14-day pay-or-quit notice (Va. Code § 55.1-1245) from scratch —
@@ -485,7 +579,7 @@ app.post('/api/letter/va-notice-send', async (req, res) => {
             to: d.tenantEmail,
             cc: NOTICE_CC_EMAIL,
             subject: '14-Day Notice to Pay Rent or Quit',
-            text: 'Please see the attached 14-day notice regarding past-due rent, provided pursuant to Va. Code § 55.1-1245. See the attached PDF for full details.',
+            text: buildVaNoticeText(d),
             attachments: [{ filename: 'va-pay-or-quit-notice.pdf', content: Buffer.from(outBytes) }],
         });
         if (error) throw new Error(error.message || 'Resend failed to send the email');
@@ -526,7 +620,7 @@ app.post('/api/letter/md-notice-send', async (req, res) => {
             to: d.tenantEmail,
             cc: NOTICE_CC_EMAIL,
             subject: 'Notice of Intent to File a Complaint for Summary Ejectment (Failure to Pay Rent)',
-            text: 'Please see the attached notice regarding past-due rent. This is not a notice of eviction — you have 10 days to resolve the amount due or dispute the charges. See the attached PDF for full details.',
+            text: buildMdNoticeText(d),
             attachments: [{ filename: 'md-notice-of-intent.pdf', content: Buffer.from(outBytes) }],
         });
         if (error) throw new Error(error.message || 'Resend failed to send the email');
