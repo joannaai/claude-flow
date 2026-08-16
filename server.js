@@ -426,7 +426,27 @@ async function fillVaNoticePdf(d) {
     writeLine('DATE AND METHOD OF PROVIDING NOTICE', { bold: true });
     writeLine(`This notice is being provided to the tenant by the landlord on ${d.noticeDate} by ${d.deliveryMethod}.`);
     y -= 10;
-    writeLine(`Date: ${d.noticeDate}                                    Signature: ______________________`);
+
+    // Date / signature line — drawn as two separate text runs so the landlord's
+    // signature image (same one used on the MD/Prince George's County notice)
+    // can be overlaid on the signature portion.
+    const dateText = `Date: ${d.noticeDate}`;
+    const sigLabel = 'Signature: ';
+    const sigLabelX = marginX + 250;
+    page.drawText(dateText, { x: marginX, y, size: 11, font });
+    page.drawText(sigLabel, { x: sigLabelX, y, size: 11, font });
+
+    const sigBytes = fs.readFileSync(path.join(__dirname, 'forms', 'signature.png'));
+    const sigImage = await pdfDoc.embedPng(sigBytes);
+    const sigHeight = 16;
+    const sigWidth = sigHeight * (sigImage.width / sigImage.height);
+    const sigLabelWidth = font.widthOfTextAtSize(sigLabel, 11);
+    page.drawImage(sigImage, {
+        x: sigLabelX + sigLabelWidth,
+        y: y - 3,
+        width: sigWidth,
+        height: sigHeight,
+    });
     y -= 14;
 
     writeLine('This is a template based on current Virginia statutory requirements and is not a substitute for advice from a Virginia-licensed attorney. Verify current requirements before relying on this notice in a legal proceeding.', { size: 8 });
