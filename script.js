@@ -1282,6 +1282,8 @@ function buildMdNoticeHtml(d) {
 }
 
 function setupLetterForm() {
+    const stateSelect = document.getElementById("letter-state-select");
+    const generalForm = document.getElementById("letter-form-general");
     const mdForm = document.getElementById("letter-form-md");
     const previewWrapper = document.getElementById("letter-preview-wrapper");
     const preview = document.getElementById("letter-preview");
@@ -1290,6 +1292,7 @@ function setupLetterForm() {
     const pdfBtn = document.getElementById("letter-pdf-btn");
     const emailBtn = document.getElementById("letter-email-btn");
 
+    let lastLetterType = null; // "general" | "md-cv115"
     let lastLetter = null; // raw (unescaped) field values, used for PDF export
 
     // Default the notice date and rent-owed-through date to today
@@ -1301,6 +1304,58 @@ function setupLetterForm() {
     document.getElementById("md-notice-date").value = todayIso;
     document.getElementById("md-rent-to").value = todayIso;
     document.getElementById("md-latefee-to").value = todayIso;
+
+    stateSelect.addEventListener("change", () => {
+        const isGeneral = stateSelect.value === "general";
+        generalForm.style.display = isGeneral ? "flex" : "none";
+        mdForm.style.display = isGeneral ? "none" : "flex";
+        // Email sending is only wired up for the official MD notice
+        emailBtn.style.display = isGeneral ? "none" : "inline-block";
+        previewWrapper.style.display = "none";
+    });
+
+    generalForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+
+        const recipientRaw = document.getElementById("letter-recipient").value;
+        const addressRaw = document.getElementById("letter-address").value;
+        const reasonRaw = document.getElementById("letter-reason").value;
+        const period = document.getElementById("letter-period").value;
+        const detailsRaw = document.getElementById("letter-details").value;
+        const senderRaw = document.getElementById("letter-sender").value;
+
+        const periodLabel = period
+            ? (() => {
+                const [py, pm] = period.split("-").map(Number);
+                return new Date(py, pm - 1, 1).toLocaleDateString(undefined, { year: "numeric", month: "long" });
+            })()
+            : "";
+        const today = new Date().toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
+
+        lastLetterType = "general";
+        lastLetter = { recipient: recipientRaw, address: addressRaw, reason: reasonRaw, periodLabel, details: detailsRaw, sender: senderRaw, today };
+
+        const recipient = escapeLetterHtml(recipientRaw);
+        const address = escapeLetterHtml(addressRaw);
+        const reason = escapeLetterHtml(reasonRaw);
+        const details = escapeLetterHtml(detailsRaw);
+        const sender = escapeLetterHtml(senderRaw);
+
+        preview.innerHTML = `
+            <div style="line-height:1.8;">
+                <p>${today}</p>
+                <p>${recipient}<br>${address}</p>
+                <p><strong>Re: Warning Notice — ${reason}${periodLabel ? " (" + periodLabel + ")" : ""}</strong></p>
+                <p>Dear ${recipient},</p>
+                <p>This letter serves as formal notice regarding <strong>${reason.toLowerCase()}</strong> for the period of ${periodLabel}.</p>
+                <p>${details.replace(/\n/g, "<br>")}</p>
+                <p>Please address this matter promptly. Failure to do so may result in further action as outlined in your lease agreement.</p>
+                <p>Sincerely,<br>${sender}</p>
+            </div>
+        `;
+        previewWrapper.style.display = "block";
+        previewWrapper.scrollIntoView({ behavior: "smooth" });
+    });
 
     mdForm.addEventListener("submit", (e) => {
         e.preventDefault();
@@ -1348,6 +1403,7 @@ function setupLetterForm() {
         d.rentPeriod = `${d.rentCount} ${d.rentUnit}`;
         d.lateFeePeriod = d.lateFeeCount ? `${d.lateFeeCount} ${d.lateFeeUnit}` : "";
 
+        lastLetterType = "md-cv115";
         lastLetter = d;
 
         // Escape all user-entered text fields before rendering as HTML
@@ -1373,7 +1429,49 @@ function setupLetterForm() {
     });
 
     pdfBtn.addEventListener("click", async () => {
-        if (!lastLetter) { alert("Generate the notice first."); return; }
+        if (!lastLetter) { alert("Generate the letter first."); return; }
+
+        if (lastLetterType === "general") {
+            if (!window.jspdf) { alert("PDF library failed to load — check your internet connection."); return; }
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ unit: "pt", format: "letter" });
+            doc.setFont("times", "normal");
+            doc.setFontSize(12);
+
+            const marginX = 60;
+            const maxWidth = 612 - marginX * 2;
+            const lineHeight = 18;
+            let y = 60;
+
+            const writeLine = (text, bold = false) => {
+                doc.setFont("times", bold ? "bold" : "normal");
+                const lines = doc.splitTextToSize(text, maxWidth);
+                lines.forEach(line => {
+                    if (y > 740) { doc.addPage(); y = 60; }
+                    doc.text(line, marginX, y);
+                    y += lineHeight;
+                });
+            };
+
+            const { recipient, address, reason, periodLabel, details, sender, today } = lastLetter;
+            const periodSuffix = periodLabel ? ` (${periodLabel})` : "";
+
+            writeLine(today); y += lineHeight / 2;
+            writeLine(recipient);
+            writeLine(address); y += lineHeight / 2;
+            writeLine(`Re: Warning Notice — ${reason}${periodSuffix}`, true); y += lineHeight / 2;
+            writeLine(`Dear ${recipient},`); y += lineHeight / 2;
+            writeLine(`This letter serves as formal notice regarding ${reason.toLowerCase()} for the period of ${periodLabel}.`); y += lineHeight / 2;
+            writeLine(details); y += lineHeight / 2;
+            writeLine("Please address this matter promptly. Failure to do so may result in further action as outlined in your lease agreement."); y += lineHeight / 2;
+            writeLine("Sincerely,");
+            writeLine(sender);
+
+            const safeName = ("warning-letter-" + (recipient || "letter")).replace(/[^a-z0-9]+/gi, "_").replace(/^_+|_+$/g, "") || "letter";
+            doc.save(`${safeName}.pdf`);
+            return;
+        }
 
         try {
             const response = await fetch('/api/letter/md-notice-pdf', {

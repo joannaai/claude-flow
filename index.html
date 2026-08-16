@@ -71,20 +71,42 @@
         <!-- Letter Section -->
         <section id="letter" class="section">
             <div class="section-header">
-                <h2>MD Notice of Intent — Failure to Pay Rent (DC-CV-115)</h2>
+                <h2>Tenant Notices &amp; Letters</h2>
             </div>
             <div class="about-box" id="letter-form-box">
                 <div class="form-row" style="align-items:center; margin-bottom:1rem;">
-                    <label for="letter-state-select" style="margin:0; white-space:nowrap;">State</label>
-                    <select id="letter-state-select" class="form-input" style="max-width:220px;">
-                        <option value="MD" selected>Maryland</option>
-                        <option value="DC" disabled>DC (coming soon)</option>
-                        <option value="VA" disabled>Virginia (coming soon)</option>
+                    <label for="letter-state-select" style="margin:0; white-space:nowrap;">Area</label>
+                    <select id="letter-state-select" class="form-input" style="max-width:280px;">
+                        <option value="MD" selected>Maryland — Prince George's County</option>
+                        <option value="general">Other Area — General Warning Letter</option>
+                        <option value="DC" disabled>DC (official form coming soon)</option>
+                        <option value="VA" disabled>Virginia (official form coming soon)</option>
                     </select>
                 </div>
                 <p style="color: var(--text-tertiary); font-size: 0.85rem; margin-top: -0.5rem; margin-bottom: 1rem;">
-                    This DC-CV-115 notice format currently applies only to Prince George's County, Maryland.
+                    The official DC-CV-115 notice format only applies to Prince George's County, Maryland. For any other area, use the General Warning Letter option instead.
                 </p>
+
+                <!-- General warning letter (any area outside Prince George's County, MD) -->
+                <form class="contact-form" id="letter-form-general" style="display:none;">
+                    <div class="form-row">
+                        <input type="text" id="letter-recipient" placeholder="Recipient Name" required class="form-input">
+                        <input type="text" id="letter-address" placeholder="Property / Unit Address" required class="form-input">
+                    </div>
+                    <div class="form-row">
+                        <select id="letter-reason" class="form-input" required>
+                            <option value="">— Select Reason —</option>
+                            <option value="Late Rent Payment">Late Rent Payment</option>
+                            <option value="Lease Violation">Lease Violation</option>
+                            <option value="Other">Other</option>
+                        </select>
+                        <input type="month" id="letter-period" required class="form-input">
+                    </div>
+                    <textarea id="letter-details" placeholder="Additional details (e.g. amount owed, specific violation, deadline to resolve)..." rows="4" required class="form-input full-width"></textarea>
+                    <input type="text" id="letter-sender" placeholder="Your Name / Property Manager" required class="form-input full-width">
+                    <button type="submit" class="submit-btn">Generate Letter</button>
+                </form>
+
                 <!-- MD DC-CV-115 Notice of Intent to File a Complaint for Summary Ejectment (Failure to Pay Rent) -->
                 <form class="contact-form" id="letter-form-md">
                     <input type="hidden" id="md-landlord-name" value="Aico LLC">
@@ -335,6 +357,7 @@
         </div>
     </div>
 
-    <script src="script.js?v=13"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/3.0.1/jspdf.umd.min.js"></script>
+    <script src="script.js?v=14"></script>
 </body>
 </html>
