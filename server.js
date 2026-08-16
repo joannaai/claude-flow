@@ -10,6 +10,7 @@ const { pool, init } = require('./db');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
+const NOTICE_CC_EMAIL = 'aicomanagementllc@gmail.com';
 
 app.use(cors());
 app.use((req, res, next) => {
@@ -482,6 +483,7 @@ app.post('/api/letter/va-notice-send', async (req, res) => {
         const { error } = await resend.emails.send({
             from: `${d.landlordName || 'Landlord'} <${fromAddress}>`,
             to: d.tenantEmail,
+            cc: NOTICE_CC_EMAIL,
             subject: '14-Day Notice to Pay Rent or Quit',
             text: 'Please see the attached 14-day notice regarding past-due rent, provided pursuant to Va. Code § 55.1-1245. See the attached PDF for full details.',
             attachments: [{ filename: 'va-pay-or-quit-notice.pdf', content: Buffer.from(outBytes) }],
@@ -522,6 +524,7 @@ app.post('/api/letter/md-notice-send', async (req, res) => {
         const { error } = await resend.emails.send({
             from: `${d.landlordName || 'Landlord'} <${fromAddress}>`,
             to: d.tenantEmail,
+            cc: NOTICE_CC_EMAIL,
             subject: 'Notice of Intent to File a Complaint for Summary Ejectment (Failure to Pay Rent)',
             text: 'Please see the attached notice regarding past-due rent. This is not a notice of eviction — you have 10 days to resolve the amount due or dispute the charges. See the attached PDF for full details.',
             attachments: [{ filename: 'md-notice-of-intent.pdf', content: Buffer.from(outBytes) }],
