@@ -76,16 +76,59 @@
             <div class="about-box" id="letter-form-box">
                 <div class="form-row" style="align-items:center; margin-bottom:1rem;">
                     <label for="letter-state-select" style="margin:0; white-space:nowrap;">Area</label>
-                    <select id="letter-state-select" class="form-input" style="max-width:280px;">
+                    <select id="letter-state-select" class="form-input" style="max-width:320px;">
                         <option value="MD" selected>Maryland — Prince George's County</option>
+                        <option value="VA">Virginia — Pay or Quit Notice (Prince William County)</option>
                         <option value="general">Other Area — General Warning Letter</option>
                         <option value="DC" disabled>DC (official form coming soon)</option>
-                        <option value="VA" disabled>Virginia (official form coming soon)</option>
                     </select>
                 </div>
                 <p style="color: var(--text-tertiary); font-size: 0.85rem; margin-top: -0.5rem; margin-bottom: 1rem;">
-                    The official DC-CV-115 notice format only applies to Prince George's County, Maryland. For any other area, use the General Warning Letter option instead.
+                    The official DC-CV-115 notice format only applies to Prince George's County, Maryland. The Virginia notice reflects the 14-day pay-or-quit period required by Va. Code § 55.1-1245 (effective July 1, 2026). This is a template, not legal advice — have it reviewed by a Virginia-licensed attorney before relying on it.
                 </p>
+
+                <!-- Virginia Pay or Quit Notice (Va. Code § 55.1-1245 — 14-day notice) -->
+                <form class="contact-form" id="letter-form-va" style="display:none;">
+                    <input type="hidden" id="va-landlord-name" value="Aico LLC">
+                    <input type="hidden" id="va-landlord-address" value="P.O. Box 2002">
+                    <input type="hidden" id="va-landlord-citystatezip" value="Falls Church, VA">
+                    <input type="hidden" id="va-landlord-phone" value="3016618409">
+                    <input type="hidden" id="va-landlord-email" value="joannaaihoa2@gmail.com">
+
+                    <h4 style="color:var(--accent);">Tenant(s) (To)</h4>
+                    <div class="form-row">
+                        <input type="text" id="va-tenant1" placeholder="Tenant 1 Name" required class="form-input">
+                        <input type="text" id="va-tenant2" placeholder="Tenant 2 Name (optional)" class="form-input">
+                    </div>
+                    <div class="form-row">
+                        <input type="text" id="va-tenant-address" placeholder="Tenant Street Address" required class="form-input">
+                        <input type="text" id="va-tenant-citystatezip" placeholder="City, VA, Zip (Prince William County)" required class="form-input">
+                    </div>
+                    <div class="form-row">
+                        <input type="tel" id="va-tenant-phone" placeholder="Tenant Telephone" class="form-input">
+                        <input type="email" id="va-tenant-email" placeholder="Tenant E-mail Address" class="form-input">
+                    </div>
+
+                    <h4 style="color:var(--accent); margin-top:1rem;">Past-Due Rent</h4>
+                    <div class="form-row">
+                        <input type="number" step="0.01" id="va-rent-amount" placeholder="Rent Amount Owed ($)" required class="form-input">
+                        <input type="number" id="va-rent-count" placeholder="Number of Months" required class="form-input">
+                    </div>
+                    <input type="hidden" id="va-rent-from">
+                    <input type="hidden" id="va-rent-to">
+                    <input type="hidden" id="va-notice-date">
+                    <div class="form-row">
+                        <select id="va-delivery-method" class="form-input full-width" required>
+                            <option value="">— Delivery Method —</option>
+                            <option value="hand delivery to the tenant">Hand delivery to the tenant</option>
+                            <option value="first-class mail to the tenant's last known address">First-class mail to the tenant's last known address</option>
+                            <option value="certified or registered mail to the tenant's last known address">Certified or registered mail</option>
+                            <option value="posting on the premises where the tenant cannot be found">Posting on the premises (tenant not found)</option>
+                            <option value="electronic delivery as agreed in the rental agreement" selected>Electronic delivery (by e-mail, as agreed in the lease)</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="submit-btn">Generate Notice</button>
+                </form>
 
                 <!-- General warning letter (any area outside Prince George's County, MD) -->
                 <form class="contact-form" id="letter-form-general" style="display:none;">

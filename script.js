@@ -1281,10 +1281,51 @@ function buildMdNoticeHtml(d) {
     `;
 }
 
+function buildVaNoticeHtml(d) {
+    const fmt = n => "$" + Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return `
+        <div style="line-height:1.6; font-size:0.92rem;">
+            <h3 style="text-align:center; margin-bottom:0.2rem;">14-DAY NOTICE TO PAY RENT OR QUIT</h3>
+            <p style="text-align:center; margin-bottom:1.2rem;">(Nonpayment of Rent — Va. Code § 55.1-1245)</p>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
+                <div>
+                    <strong>FROM: Landlord/Agent</strong>
+                    <p style="margin:0.2rem 0;">${d.landlordName}<br>${d.landlordAddress}<br>${d.landlordCityStateZip}<br>Tel: ${d.landlordPhone}${d.landlordEmail ? "<br>Email: " + d.landlordEmail : ""}</p>
+                </div>
+                <div>
+                    <strong>TO: Tenant(s)</strong>
+                    <p style="margin:0.2rem 0;">${d.tenant1}${d.tenant2 ? ", " + d.tenant2 : ""}<br>${d.tenantAddress}<br>${d.tenantCityStateZip}${d.tenantPhone ? "<br>Tel: " + d.tenantPhone : ""}${d.tenantEmail ? "<br>Email: " + d.tenantEmail : ""}</p>
+                </div>
+            </div>
+
+            <p>You are hereby notified that you have failed to pay rent as required under your rental agreement. The rent set forth below remains unpaid:</p>
+
+            <table style="width:100%; border-collapse:collapse; margin:1rem 0;">
+                <tr><td style="border:1px solid #999; padding:0.5rem;">${fmt(d.rentAmount)} rent for the ${d.rentPeriod}</td><td style="border:1px solid #999; padding:0.5rem;">${d.rentFrom} to ${d.rentTo}</td></tr>
+                <tr><td style="border:1px solid #999; padding:0.5rem;"><strong>TOTAL DUE</strong></td><td style="border:1px solid #999; padding:0.5rem;"><strong>${fmt(d.rentAmount)}</strong></td></tr>
+            </table>
+
+            <p><strong>You have FOURTEEN (14) DAYS from the date of this notice to pay the total amount due.</strong> If the rent is not paid in full within this 14-day period, the landlord intends to terminate the rental agreement and may file an unlawful detainer action in the <strong>Prince William County General District Court</strong> to obtain possession of the premises. This notice is provided pursuant to Va. Code § 55.1-1245.</p>
+
+            <p><strong>DATE AND METHOD OF PROVIDING NOTICE</strong></p>
+            <p>This notice is being provided to the tenant by the landlord on ${d.noticeDate} by ${d.deliveryMethod}.</p>
+
+            <div style="display:flex; justify-content:space-between; margin:1.5rem 0;">
+                <span>Date: ${d.noticeDate}</span>
+                <span>Signature: ______________________</span>
+            </div>
+
+            <p style="font-size:0.8rem; color:#888; border:1px solid #999; padding:0.75rem;">This is a template based on current Virginia statutory requirements and is not a substitute for advice from a Virginia-licensed attorney. Notice periods and required content can change; verify current requirements before relying on this notice in a legal proceeding.</p>
+        </div>
+    `;
+}
+
 function setupLetterForm() {
     const stateSelect = document.getElementById("letter-state-select");
     const generalForm = document.getElementById("letter-form-general");
     const mdForm = document.getElementById("letter-form-md");
+    const vaForm = document.getElementById("letter-form-va");
     const previewWrapper = document.getElementById("letter-preview-wrapper");
     const preview = document.getElementById("letter-preview");
     const printBtn = document.getElementById("letter-print-btn");
@@ -1292,7 +1333,7 @@ function setupLetterForm() {
     const pdfBtn = document.getElementById("letter-pdf-btn");
     const emailBtn = document.getElementById("letter-email-btn");
 
-    let lastLetterType = null; // "general" | "md-cv115"
+    let lastLetterType = null; // "general" | "md-cv115" | "va-pay-or-quit"
     let lastLetter = null; // raw (unescaped) field values, used for PDF export
 
     // Default the notice date and rent-owed-through date to today
@@ -1304,13 +1345,17 @@ function setupLetterForm() {
     document.getElementById("md-notice-date").value = todayIso;
     document.getElementById("md-rent-to").value = todayIso;
     document.getElementById("md-latefee-to").value = todayIso;
+    document.getElementById("va-notice-date").value = todayIso;
+    document.getElementById("va-rent-to").value = todayIso;
+
+    const FORMS_BY_STATE = { general: generalForm, MD: mdForm, VA: vaForm };
 
     stateSelect.addEventListener("change", () => {
-        const isGeneral = stateSelect.value === "general";
-        generalForm.style.display = isGeneral ? "flex" : "none";
-        mdForm.style.display = isGeneral ? "none" : "flex";
+        Object.entries(FORMS_BY_STATE).forEach(([state, form]) => {
+            form.style.display = state === stateSelect.value ? "flex" : "none";
+        });
         // Email sending is only wired up for the official MD notice
-        emailBtn.style.display = isGeneral ? "none" : "inline-block";
+        emailBtn.style.display = stateSelect.value === "MD" ? "inline-block" : "none";
         previewWrapper.style.display = "none";
     });
 
@@ -1415,6 +1460,51 @@ function setupLetterForm() {
         previewWrapper.scrollIntoView({ behavior: "smooth" });
     });
 
+    vaForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+
+        // Rent-owed-from date = the 1st of the month, N months before today
+        const rentCountNum = parseInt(document.getElementById("va-rent-count").value, 10) || 0;
+        const rentFromDate = new Date();
+        rentFromDate.setDate(1);
+        rentFromDate.setMonth(rentFromDate.getMonth() - rentCountNum);
+        const rfYyyy = rentFromDate.getFullYear();
+        const rfMm = String(rentFromDate.getMonth() + 1).padStart(2, "0");
+        document.getElementById("va-rent-from").value = `${rfYyyy}-${rfMm}-01`;
+
+        const val = id => document.getElementById(id).value;
+        const d = {
+            landlordName: val("va-landlord-name"),
+            landlordAddress: val("va-landlord-address"),
+            landlordCityStateZip: val("va-landlord-citystatezip"),
+            landlordPhone: val("va-landlord-phone"),
+            landlordEmail: val("va-landlord-email"),
+            tenant1: val("va-tenant1"),
+            tenant2: val("va-tenant2"),
+            tenantAddress: val("va-tenant-address"),
+            tenantCityStateZip: val("va-tenant-citystatezip"),
+            tenantPhone: val("va-tenant-phone"),
+            tenantEmail: val("va-tenant-email"),
+            rentAmount: val("va-rent-amount"),
+            rentCount: val("va-rent-count"),
+            rentFrom: val("va-rent-from"),
+            rentTo: val("va-rent-to"),
+            noticeDate: val("va-notice-date"),
+            deliveryMethod: val("va-delivery-method"),
+        };
+        d.rentPeriod = `${d.rentCount} month${d.rentCount == 1 ? "" : "s"}`;
+
+        lastLetterType = "va-pay-or-quit";
+        lastLetter = d;
+
+        const escaped = {};
+        Object.keys(d).forEach(k => { escaped[k] = escapeLetterHtml(String(d[k] ?? "")); });
+
+        preview.innerHTML = buildVaNoticeHtml(escaped);
+        previewWrapper.style.display = "block";
+        previewWrapper.scrollIntoView({ behavior: "smooth" });
+    });
+
     printBtn.addEventListener("click", () => {
         window.print();
     });
@@ -1469,6 +1559,71 @@ function setupLetterForm() {
             writeLine(sender);
 
             const safeName = ("warning-letter-" + (recipient || "letter")).replace(/[^a-z0-9]+/gi, "_").replace(/^_+|_+$/g, "") || "letter";
+            doc.save(`${safeName}.pdf`);
+            return;
+        }
+
+        if (lastLetterType === "va-pay-or-quit") {
+            if (!window.jspdf) { alert("PDF library failed to load — check your internet connection."); return; }
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ unit: "pt", format: "letter" });
+            doc.setFont("times", "normal");
+            doc.setFontSize(11);
+
+            const marginX = 54;
+            const maxWidth = 612 - marginX * 2;
+            let y = 50;
+            const fmt = n => "$" + Number(n || 0).toFixed(2);
+
+            const writeLine = (text, opts = {}) => {
+                doc.setFont("times", opts.bold ? "bold" : "normal");
+                doc.setFontSize(opts.size || 11);
+                const lines = doc.splitTextToSize(text, opts.width || maxWidth);
+                lines.forEach(line => {
+                    if (y > 740) { doc.addPage(); y = 50; }
+                    const x = opts.center ? 306 - doc.getTextWidth(line) / 2 : marginX;
+                    doc.text(line, x, y);
+                    y += opts.lineHeight || 15;
+                });
+            };
+
+            writeLine("14-DAY NOTICE TO PAY RENT OR QUIT", { bold: true, size: 13, center: true });
+            writeLine("(Nonpayment of Rent — Va. Code § 55.1-1245)", { size: 9, center: true });
+            y += 8;
+
+            writeLine("FROM: Landlord/Agent", { bold: true });
+            writeLine(lastLetter.landlordName);
+            writeLine(lastLetter.landlordAddress);
+            writeLine(lastLetter.landlordCityStateZip + (lastLetter.landlordPhone ? "   Tel: " + lastLetter.landlordPhone : ""));
+            if (lastLetter.landlordEmail) writeLine("Email: " + lastLetter.landlordEmail);
+            y += 6;
+
+            writeLine("TO: Tenant(s)", { bold: true });
+            writeLine(lastLetter.tenant1 + (lastLetter.tenant2 ? ", " + lastLetter.tenant2 : ""));
+            writeLine(lastLetter.tenantAddress);
+            writeLine(lastLetter.tenantCityStateZip + (lastLetter.tenantPhone ? "   Tel: " + lastLetter.tenantPhone : ""));
+            if (lastLetter.tenantEmail) writeLine("Email: " + lastLetter.tenantEmail);
+            y += 10;
+
+            writeLine("You are hereby notified that you have failed to pay rent as required under your rental agreement. The rent set forth below remains unpaid:");
+            y += 4;
+            writeLine(`${fmt(lastLetter.rentAmount)} rent for the ${lastLetter.rentPeriod}   ${lastLetter.rentFrom} to ${lastLetter.rentTo}`);
+            writeLine(`TOTAL DUE: ${fmt(lastLetter.rentAmount)}`, { bold: true });
+            y += 8;
+
+            writeLine("You have FOURTEEN (14) DAYS from the date of this notice to pay the total amount due. If the rent is not paid in full within this 14-day period, the landlord intends to terminate the rental agreement and may file an unlawful detainer action in the Prince William County General District Court to obtain possession of the premises. This notice is provided pursuant to Va. Code § 55.1-1245.", { bold: true });
+            y += 8;
+
+            writeLine("DATE AND METHOD OF PROVIDING NOTICE", { bold: true });
+            writeLine(`This notice is being provided to the tenant by the landlord on ${lastLetter.noticeDate} by ${lastLetter.deliveryMethod}.`);
+            y += 10;
+            writeLine(`Date: ${lastLetter.noticeDate}                                    Signature: ______________________`);
+            y += 14;
+
+            writeLine("This is a template based on current Virginia statutory requirements and is not a substitute for advice from a Virginia-licensed attorney. Verify current requirements before relying on this notice in a legal proceeding.", { size: 8 });
+
+            const safeName = ("va-pay-or-quit-" + (lastLetter.tenant1 || "tenant")).replace(/[^a-z0-9]+/gi, "_").replace(/^_+|_+$/g, "") || "notice";
             doc.save(`${safeName}.pdf`);
             return;
         }
