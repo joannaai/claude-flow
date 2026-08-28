@@ -248,6 +248,8 @@ function setupNavigation() {
                 renderArchives();
             } else if (section === "houses") {
                 loadHouses();
+            } else if (section === "letter-history") {
+                loadLetterHistory();
             }
         });
     });
@@ -1673,6 +1675,62 @@ function setupLetterForm() {
             emailBtn.textContent = originalText;
         }
     });
+}
+
+const LETTER_TYPE_LABELS = {
+    "md-cv115": "MD — Prince George's County",
+    "va-pay-or-quit": "VA — Prince William County",
+    general: "General Warning Letter",
+};
+
+async function loadLetterHistory() {
+    const container = document.getElementById("letter-history-list");
+    container.innerHTML = `<p style="color: var(--text-tertiary); text-align:center; padding:2rem;">Loading…</p>`;
+
+    try {
+        const response = await fetch('/api/letter/history');
+        if (!response.ok) throw new Error((await response.json()).error || 'Server error');
+        const rows = await response.json();
+
+        if (!rows.length) {
+            container.innerHTML = `<p style="color: var(--text-tertiary); text-align:center; padding:2rem;">No notices sent yet. Sent notices will show up here.</p>`;
+            return;
+        }
+
+        const fmtDate = iso => new Date(iso).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+        const fmtAmount = n => n === null || n === undefined ? "—" : "$" + Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+        container.innerHTML = `
+            <div style="overflow-x:auto;">
+                <table style="width:100%; border-collapse:collapse;">
+                    <thead>
+                        <tr style="text-align:left; border-bottom:2px solid var(--border-color, #999);">
+                            <th style="padding:0.6rem 0.5rem;">Date</th>
+                            <th style="padding:0.6rem 0.5rem;">Notice Type</th>
+                            <th style="padding:0.6rem 0.5rem;">Tenant</th>
+                            <th style="padding:0.6rem 0.5rem;">Tenant Email</th>
+                            <th style="padding:0.6rem 0.5rem;">Rent Amount</th>
+                            <th style="padding:0.6rem 0.5rem;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows.map(r => `
+                            <tr style="border-bottom:1px solid var(--border-color, #ddd);">
+                                <td style="padding:0.6rem 0.5rem; white-space:nowrap;">${escapeLetterHtml(fmtDate(r.created_at))}</td>
+                                <td style="padding:0.6rem 0.5rem;">${escapeLetterHtml(LETTER_TYPE_LABELS[r.letter_type] || r.letter_type)}</td>
+                                <td style="padding:0.6rem 0.5rem;">${escapeLetterHtml(r.tenant_name || "—")}</td>
+                                <td style="padding:0.6rem 0.5rem;">${escapeLetterHtml(r.tenant_email || "—")}</td>
+                                <td style="padding:0.6rem 0.5rem;">${fmtAmount(r.rent_amount)}</td>
+                                <td style="padding:0.6rem 0.5rem; text-transform:capitalize;">${escapeLetterHtml(r.action)}</td>
+                            </tr>
+                        `).join("")}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    } catch (err) {
+        container.innerHTML = `<p style="color:#c0392b; text-align:center; padding:2rem;">Could not load letter history: ${escapeLetterHtml(err.message)}</p>`;
+    }
 }
 
 document.addEventListener("DOMContentLoaded", () => {

@@ -35,6 +35,15 @@ async function init() {
             houses     JSONB NOT NULL,
             fetched_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         );
+        CREATE TABLE IF NOT EXISTS letter_history (
+            id           SERIAL PRIMARY KEY,
+            letter_type  TEXT NOT NULL,
+            tenant_name  TEXT,
+            tenant_email TEXT,
+            rent_amount  NUMERIC,
+            action       TEXT NOT NULL,
+            created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
         CREATE TABLE IF NOT EXISTS houses (
             zpid          BIGINT PRIMARY KEY,
             address       TEXT,

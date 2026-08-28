@@ -275,6 +275,30 @@ app.get('/api/house-photo', (req, res) => {
 
 // ── Letters ──────────────────────────────────────────────────────────────────
 
+// Records a generated/sent notice so it shows up on the Letter History page.
+// Logging failures are swallowed — they should never block the actual send.
+async function logLetterHistory({ letterType, tenantName, tenantEmail, rentAmount, action }) {
+    try {
+        await pool.query(
+            'INSERT INTO letter_history (letter_type, tenant_name, tenant_email, rent_amount, action) VALUES ($1,$2,$3,$4,$5)',
+            [letterType, tenantName || null, tenantEmail || null, rentAmount ? Number(rentAmount) : null, action]
+        );
+    } catch (e) {
+        console.error('Failed to log letter history:', e.message);
+    }
+}
+
+app.get('/api/letter/history', async (req, res) => {
+    try {
+        const result = await pool.query(
+            'SELECT id, letter_type, tenant_name, tenant_email, rent_amount, action, created_at FROM letter_history ORDER BY created_at DESC LIMIT 200'
+        );
+        res.json(result.rows);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 function formatMonthYear(isoDate) {
     if (!isoDate) return '';
     const [y, m] = isoDate.split('-').map(Number);
@@ -584,6 +608,14 @@ app.post('/api/letter/va-notice-send', async (req, res) => {
         });
         if (error) throw new Error(error.message || 'Resend failed to send the email');
 
+        await logLetterHistory({
+            letterType: 'va-pay-or-quit',
+            tenantName: d.tenant1,
+            tenantEmail: d.tenantEmail,
+            rentAmount: d.rentAmount,
+            action: 'emailed',
+        });
+
         res.json({ success: true, sentTo: d.tenantEmail });
     } catch (e) {
         res.status(500).json({ error: e.message });
@@ -624,6 +656,14 @@ app.post('/api/letter/md-notice-send', async (req, res) => {
             attachments: [{ filename: 'md-notice-of-intent.pdf', content: Buffer.from(outBytes) }],
         });
         if (error) throw new Error(error.message || 'Resend failed to send the email');
+
+        await logLetterHistory({
+            letterType: 'md-cv115',
+            tenantName: d.tenant1,
+            tenantEmail: d.tenantEmail,
+            rentAmount: d.rentAmount,
+            action: 'emailed',
+        });
 
         res.json({ success: true, sentTo: d.tenantEmail });
     } catch (e) {

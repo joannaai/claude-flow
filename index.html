@@ -70,8 +70,9 @@
 
         <!-- Letter Section -->
         <section id="letter" class="section">
-            <div class="section-header">
+            <div class="section-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
                 <h2>Tenant Notices &amp; Letters</h2>
+                <a href="#letter-history" class="nav-tab" data-section="letter-history" style="position:static; padding:0.4rem 0.9rem; border-radius:6px; background:var(--bg-secondary); font-size:0.85rem; white-space:nowrap;">📜 Letter History</a>
             </div>
             <div class="about-box" id="letter-form-box">
                 <div class="form-row" style="align-items:center; margin-bottom:1rem;">
@@ -203,6 +204,19 @@
                     <button id="letter-copy-btn" class="submit-btn" style="background:#555;">Copy to Clipboard</button>
                     <button id="letter-pdf-btn" class="submit-btn" style="background:#2d6a4f;">Download PDF</button>
                     <button id="letter-email-btn" class="submit-btn" style="background:#1a5276;">Send Email to Tenant</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Letter History Section -->
+        <section id="letter-history" class="section">
+            <div class="section-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+                <h2>Letter History</h2>
+                <a href="#letter" class="nav-tab" data-section="letter" style="position:static; padding:0.4rem 0.9rem; border-radius:6px; background:var(--bg-secondary); font-size:0.85rem; white-space:nowrap;">← Back to Notices</a>
+            </div>
+            <div class="about-box">
+                <div id="letter-history-list">
+                    <p style="color: var(--text-tertiary); text-align:center; padding:2rem;">Loading…</p>
                 </div>
             </div>
         </section>
