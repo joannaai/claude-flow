@@ -7,32 +7,14 @@
     <link rel="stylesheet" href="styles.css?v=7">
 </head>
 <body>
-    <!-- Header -->
-    <header class="header">
-        <div class="header-content">
-            <div class="brand">
-                <h1>Aico LLC</h1>
-                <p class="tagline">Tenant Notices &amp; Pay-or-Quit Letters</p>
-            </div>
-            <div class="header-controls">
-                <button id="theme-toggle" class="theme-btn">🌙</button>
-            </div>
-        </div>
-    </header>
+    <button id="theme-toggle" class="theme-btn" style="position:fixed; top:1rem; right:1rem; z-index:10;">🌙</button>
 
-    <!-- Navigation -->
-    <nav class="nav-tabs">
-        <div class="nav-container">
-            <a href="#letter" class="nav-tab active" data-section="letter">Notices</a>
-            <a href="#letter-history" class="nav-tab" data-section="letter-history">History</a>
-        </div>
-    </nav>
-
-    <main class="main-content">
+    <main class="main-content" style="margin-top:2rem;">
         <!-- Letter Section -->
         <section id="letter" class="section active">
-            <div class="section-header">
+            <div class="section-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
                 <h2>Tenant Notices &amp; Letters</h2>
+                <a href="#letter-history" class="nav-tab" data-section="letter-history" style="position:static; padding:0.4rem 0.9rem; border-radius:6px; background:var(--bg-secondary); font-size:0.85rem; white-space:nowrap;">📜 Letter History</a>
             </div>
             <div class="about-box" id="letter-form-box">
                 <div class="form-row" style="align-items:center; margin-bottom:1rem;">
@@ -170,8 +152,9 @@
 
         <!-- Letter History Section -->
         <section id="letter-history" class="section">
-            <div class="section-header">
+            <div class="section-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
                 <h2>Letter History</h2>
+                <a href="#letter" class="nav-tab" data-section="letter" style="position:static; padding:0.4rem 0.9rem; border-radius:6px; background:var(--bg-secondary); font-size:0.85rem; white-space:nowrap;">← Back to Notices</a>
             </div>
             <div class="about-box">
                 <div id="letter-history-list">
