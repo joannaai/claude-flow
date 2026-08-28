@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aico LLC — Tenant Notices</title>
+    <link rel="stylesheet" href="styles.css?v=7">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="brand">
+                <h1>Aico LLC</h1>
+                <p class="tagline">Tenant Notices &amp; Pay-or-Quit Letters</p>
+            </div>
+            <div class="header-controls">
+                <button id="theme-toggle" class="theme-btn">🌙</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation -->
+    <nav class="nav-tabs">
+        <div class="nav-container">
+            <a href="#letter" class="nav-tab active" data-section="letter">Notices</a>
+            <a href="#letter-history" class="nav-tab" data-section="letter-history">History</a>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <!-- Letter Section -->
+        <section id="letter" class="section active">
+            <div class="section-header">
+                <h2>Tenant Notices &amp; Letters</h2>
+            </div>
+            <div class="about-box" id="letter-form-box">
+                <div class="form-row" style="align-items:center; margin-bottom:1rem;">
+                    <label for="letter-state-select" style="margin:0; white-space:nowrap;">Area</label>
+                    <select id="letter-state-select" class="form-input" style="max-width:320px;">
+                        <option value="MD" selected>Maryland — Prince George's County</option>
+                        <option value="VA">Virginia — Pay or Quit Notice (Prince William County)</option>
+                        <option value="general">Other Area — General Warning Letter</option>
+                        <option value="DC" disabled>DC (official form coming soon)</option>
+                    </select>
+                </div>
+                <p style="color: var(--text-tertiary); font-size: 0.85rem; margin-top: -0.5rem; margin-bottom: 1rem;">
+                    The official DC-CV-115 notice format only applies to Prince George's County, Maryland. The Virginia notice reflects the 14-day pay-or-quit period required by Va. Code § 55.1-1245 (effective July 1, 2026). This is a template, not legal advice — have it reviewed by a Virginia-licensed attorney before relying on it.
+                </p>
+
+                <!-- Virginia Pay or Quit Notice (Va. Code § 55.1-1245 — 14-day notice) -->
+                <form class="contact-form" id="letter-form-va" style="display:none;">
+                    <input type="hidden" id="va-landlord-name" value="Aico LLC">
+                    <input type="hidden" id="va-landlord-address" value="P.O. Box 2002">
+                    <input type="hidden" id="va-landlord-citystatezip" value="Falls Church, VA">
+                    <input type="hidden" id="va-landlord-phone" value="3016618409">
+                    <input type="hidden" id="va-landlord-email" value="joannaaihoa2@gmail.com">
+
+                    <h4 style="color:var(--accent);">Tenant(s) (To)</h4>
+                    <div class="form-row">
+                        <input type="text" id="va-tenant1" placeholder="Tenant 1 Name" required class="form-input">
+                        <input type="text" id="va-tenant2" placeholder="Tenant 2 Name (optional)" class="form-input">
+                    </div>
+                    <div class="form-row">
+                        <input type="text" id="va-tenant-address" placeholder="Tenant Street Address" required class="form-input">
+                        <input type="text" id="va-tenant-citystatezip" placeholder="City, VA, Zip (Prince William County)" required class="form-input">
+                    </div>
+                    <div class="form-row">
+                        <input type="tel" id="va-tenant-phone" placeholder="Tenant Telephone" class="form-input">
+                        <input type="email" id="va-tenant-email" placeholder="Tenant E-mail Address" class="form-input">
+                    </div>
+
+                    <h4 style="color:var(--accent); margin-top:1rem;">Past-Due Rent</h4>
+                    <div class="form-row">
+                        <input type="number" step="0.01" id="va-rent-amount" placeholder="Rent Amount Owed ($)" required class="form-input">
+                        <input type="number" id="va-rent-count" placeholder="Number of Months" required class="form-input">
+                    </div>
+                    <input type="hidden" id="va-rent-from">
+                    <input type="hidden" id="va-rent-to">
+                    <input type="hidden" id="va-notice-date">
+                    <div class="form-row">
+                        <select id="va-delivery-method" class="form-input full-width" required>
+                            <option value="">— Delivery Method —</option>
+                            <option value="hand delivery to the tenant">Hand delivery to the tenant</option>
+                            <option value="first-class mail to the tenant's last known address">First-class mail to the tenant's last known address</option>
+                            <option value="certified or registered mail to the tenant's last known address">Certified or registered mail</option>
+                            <option value="posting on the premises where the tenant cannot be found">Posting on the premises (tenant not found)</option>
+                            <option value="electronic delivery as agreed in the rental agreement" selected>Electronic delivery (by e-mail, as agreed in the lease)</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="submit-btn">Generate Notice</button>
+                </form>
+
+                <!-- General warning letter (any area outside Prince George's County, MD) -->
+                <form class="contact-form" id="letter-form-general" style="display:none;">
+                    <div class="form-row">
+                        <input type="text" id="letter-recipient" placeholder="Recipient Name" required class="form-input">
+                        <input type="text" id="letter-address" placeholder="Property / Unit Address" required class="form-input">
+                    </div>
+                    <div class="form-row">
+                        <select id="letter-reason" class="form-input" required>
+                            <option value="">— Select Reason —</option>
+                            <option value="Late Rent Payment">Late Rent Payment</option>
+                            <option value="Lease Violation">Lease Violation</option>
+                            <option value="Other">Other</option>
+                        </select>
+                        <input type="month" id="letter-period" required class="form-input">
+                    </div>
+                    <textarea id="letter-details" placeholder="Additional details (e.g. amount owed, specific violation, deadline to resolve)..." rows="4" required class="form-input full-width"></textarea>
+                    <input type="text" id="letter-sender" placeholder="Your Name / Property Manager" required class="form-input full-width">
+                    <button type="submit" class="submit-btn">Generate Letter</button>
+                </form>
+
+                <!-- MD DC-CV-115 Notice of Intent to File a Complaint for Summary Ejectment (Failure to Pay Rent) -->
+                <form class="contact-form" id="letter-form-md">
+                    <input type="hidden" id="md-landlord-name" value="Aico LLC">
+                    <input type="hidden" id="md-landlord-address" value="P.O. Box 2002">
+                    <input type="hidden" id="md-landlord-citystatezip" value="Falls Church, VA">
+                    <input type="hidden" id="md-landlord-phone" value="3016618409">
+                    <input type="hidden" id="md-landlord-email" value="joannaaihoa2@gmail.com">
+
+                    <h4 style="color:var(--accent);">Tenant(s) (To)</h4>
+                    <div class="form-row">
+                        <input type="text" id="md-tenant1" placeholder="Tenant 1 Name" required class="form-input">
+                        <input type="text" id="md-tenant2" placeholder="Tenant 2 Name (optional)" class="form-input">
+                    </div>
+                    <div class="form-row">
+                        <input type="text" id="md-tenant-address" placeholder="Tenant Street Address" required class="form-input">
+                        <input type="text" id="md-tenant-citystatezip" placeholder="City, State, Zip" required class="form-input">
+                    </div>
+                    <div class="form-row">
+                        <input type="tel" id="md-tenant-phone" placeholder="Tenant Telephone" class="form-input">
+                        <input type="email" id="md-tenant-email" placeholder="Tenant E-mail Address" class="form-input">
+                    </div>
+
+                    <h4 style="color:var(--accent); margin-top:1rem;">Past-Due Rent</h4>
+                    <div class="form-row">
+                        <input type="number" step="0.01" id="md-rent-amount" placeholder="Rent Amount Owed ($)" required class="form-input">
+                        <input type="number" id="md-rent-count" placeholder="Number of Months" required class="form-input">
+                    </div>
+                    <input type="hidden" id="md-rent-unit" value="months">
+                    <input type="hidden" id="md-rent-from">
+                    <input type="hidden" id="md-rent-to">
+
+                    <h4 style="color:var(--accent); margin-top:1rem;">Late Fees (if any)</h4>
+                    <div class="form-row">
+                        <input type="number" step="0.01" id="md-latefee-amount" placeholder="Late Fee Amount ($)" class="form-input full-width">
+                    </div>
+                    <input type="hidden" id="md-latefee-unit" value="months">
+                    <input type="hidden" id="md-latefee-count">
+                    <input type="hidden" id="md-latefee-from">
+                    <input type="hidden" id="md-latefee-to">
+
+                    <input type="hidden" id="md-notice-date">
+                    <input type="hidden" id="md-delivery-method" value="Delivered electronically by e-mail message">
+                    <button type="submit" class="submit-btn">Generate Notice</button>
+                </form>
+            </div>
+
+            <div id="letter-preview-wrapper" style="display:none; margin-top: 2rem;">
+                <div class="about-box" id="letter-preview"></div>
+                <div style="display:flex; gap:1rem; margin-top:1rem;">
+                    <button id="letter-print-btn" class="submit-btn">Print</button>
+                    <button id="letter-copy-btn" class="submit-btn" style="background:#555;">Copy to Clipboard</button>
+                    <button id="letter-pdf-btn" class="submit-btn" style="background:#2d6a4f;">Download PDF</button>
+                    <button id="letter-email-btn" class="submit-btn" style="background:#1a5276;">Send Email to Tenant</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Letter History Section -->
+        <section id="letter-history" class="section">
+            <div class="section-header">
+                <h2>Letter History</h2>
+            </div>
+            <div class="about-box">
+                <div id="letter-history-list">
+                    <p style="color: var(--text-tertiary); text-align:center; padding:2rem;">Loading…</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/3.0.1/jspdf.umd.min.js"></script>
+    <script src="letter.js?v=1"></script>
+</body>
+</html>

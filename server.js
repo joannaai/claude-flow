@@ -19,6 +19,17 @@ app.use((req, res, next) => {
     next();
 });
 app.use(express.json());
+
+// Serve the standalone Tenant Notices site at its own domain's root instead of
+// the main blog's index.html. Add more hostnames here as more get pointed here.
+const LETTER_SITE_HOSTNAMES = ['file.aicomanage.org'];
+app.get('/', (req, res, next) => {
+    if (LETTER_SITE_HOSTNAMES.includes(req.hostname)) {
+        return res.sendFile(path.join(__dirname, 'letter.html'));
+    }
+    next();
+});
+
 app.use(express.static('.'));
 
 const DMV_LOCATIONS = [
