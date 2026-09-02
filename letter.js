@@ -545,8 +545,16 @@ async function loadLetterHistory() {
     }
 }
 
+function setupLogout() {
+    document.getElementById("logout-btn").addEventListener("click", async () => {
+        await fetch('/api/auth/logout', { method: 'POST' });
+        location.href = '/';
+    });
+}
+
 document.addEventListener("DOMContentLoaded", () => {
     setupTheme();
     setupLocalNavigation();
     setupLetterForm();
+    setupLogout();
 });

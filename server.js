@@ -6,6 +6,9 @@ const path       = require('path');
 const fs         = require('fs');
 const { PDFDocument, StandardFonts } = require('pdf-lib');
 const { Resend } = require('resend');
+const session      = require('express-session');
+const PgSession     = require('connect-pg-simple')(session);
+const bcrypt       = require('bcryptjs');
 const { pool, init } = require('./db');
 
 const app  = express();
@@ -19,15 +22,95 @@ app.use((req, res, next) => {
     next();
 });
 app.use(express.json());
+app.use(session({
+    store: new PgSession({ pool, createTableIfMissing: true }),
+    secret: process.env.SESSION_SECRET || 'dev-only-insecure-secret-change-me',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+    },
+}));
+
+// ── Auth ─────────────────────────────────────────────────────────────────────
+
+app.post('/api/auth/register', async (req, res) => {
+    try {
+        const { username, password } = req.body;
+        if (!username || !password) return res.status(400).json({ error: 'Username and password required' });
+        if (password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
+
+        // Bootstrap-only: registration closes itself once the first account exists.
+        const existing = await pool.query('SELECT COUNT(*) FROM users');
+        if (parseInt(existing.rows[0].count, 10) > 0) {
+            return res.status(403).json({ error: 'Registration is closed. Ask an existing user for access.' });
+        }
+
+        const hash = await bcrypt.hash(password, 12);
+        const result = await pool.query(
+            'INSERT INTO users (username, password_hash) VALUES ($1,$2) RETURNING id',
+            [username, hash]
+        );
+        req.session.userId = result.rows[0].id;
+        req.session.username = username;
+        res.json({ success: true, username });
+    } catch (e) {
+        if (e.code === '23505') return res.status(409).json({ error: 'Username already taken' });
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post('/api/auth/login', async (req, res) => {
+    try {
+        const { username, password } = req.body;
+        if (!username || !password) return res.status(400).json({ error: 'Username and password required' });
+
+        const result = await pool.query('SELECT id, password_hash FROM users WHERE username = $1', [username]);
+        const match = result.rows.length && await bcrypt.compare(password, result.rows[0].password_hash);
+        if (!match) return res.status(401).json({ error: 'Invalid username or password' });
+
+        req.session.userId = result.rows[0].id;
+        req.session.username = username;
+        res.json({ success: true, username });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post('/api/auth/logout', (req, res) => {
+    req.session.destroy(() => res.json({ success: true }));
+});
+
+app.get('/api/auth/me', async (req, res) => {
+    if (req.session && req.session.userId) {
+        return res.json({ authenticated: true, username: req.session.username });
+    }
+    try {
+        const existing = await pool.query('SELECT COUNT(*) FROM users');
+        res.json({ authenticated: false, registrationOpen: parseInt(existing.rows[0].count, 10) === 0 });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
 
 // Serve the standalone Tenant Notices site at its own domain's root instead of
 // the main blog's index.html. Add more hostnames here as more get pointed here.
+// Locally, the root still shows the full main site by default — test the
+// standalone site via /letter.html directly, or by spoofing the Host header.
 const LETTER_SITE_HOSTNAMES = ['file.aicomanage.org'];
+const isLoggedIn = req => !!(req.session && req.session.userId);
+
 app.get('/', (req, res, next) => {
     if (LETTER_SITE_HOSTNAMES.includes(req.hostname)) {
-        return res.sendFile(path.join(__dirname, 'letter.html'));
+        return res.sendFile(path.join(__dirname, isLoggedIn(req) ? 'letter.html' : 'login.html'));
     }
     next();
+});
+app.get('/letter.html', (req, res) => {
+    res.sendFile(path.join(__dirname, isLoggedIn(req) ? 'letter.html' : 'login.html'));
 });
 
 app.use(express.static('.'));
