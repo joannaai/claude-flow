@@ -43,12 +43,6 @@ app.post('/api/auth/register', async (req, res) => {
         if (!username || !password) return res.status(400).json({ error: 'Username and password required' });
         if (password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
 
-        // Bootstrap-only: registration closes itself once the first account exists.
-        const existing = await pool.query('SELECT COUNT(*) FROM users');
-        if (parseInt(existing.rows[0].count, 10) > 0) {
-            return res.status(403).json({ error: 'Registration is closed. Ask an existing user for access.' });
-        }
-
         const hash = await bcrypt.hash(password, 12);
         const result = await pool.query(
             'INSERT INTO users (username, password_hash) VALUES ($1,$2) RETURNING id',
@@ -84,16 +78,11 @@ app.post('/api/auth/logout', (req, res) => {
     req.session.destroy(() => res.json({ success: true }));
 });
 
-app.get('/api/auth/me', async (req, res) => {
+app.get('/api/auth/me', (req, res) => {
     if (req.session && req.session.userId) {
         return res.json({ authenticated: true, username: req.session.username });
     }
-    try {
-        const existing = await pool.query('SELECT COUNT(*) FROM users');
-        res.json({ authenticated: false, registrationOpen: parseInt(existing.rows[0].count, 10) === 0 });
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
+    res.json({ authenticated: false });
 });
 
 // Serve the standalone Tenant Notices site at its own domain's root instead of

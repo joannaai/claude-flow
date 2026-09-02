@@ -14,15 +14,15 @@
             <h2 id="form-title">Sign In</h2>
         </div>
         <div class="about-box">
-            <p id="form-subtitle" style="color: var(--text-tertiary); font-size:0.9rem; margin-top:-0.5rem; margin-bottom:1rem; display:none;">
-                No account exists yet — create the first one to get started.
-            </p>
             <form class="contact-form" id="auth-form">
                 <input type="text" id="username" placeholder="Username" required class="form-input full-width" autocomplete="username">
                 <input type="password" id="password" placeholder="Password" required class="form-input full-width" autocomplete="current-password">
                 <button type="submit" class="submit-btn" id="submit-btn">Sign In</button>
             </form>
             <p id="auth-error" style="color:#c0392b; margin-top:1rem; display:none;"></p>
+            <p style="text-align:center; margin-top:1rem; font-size:0.85rem;">
+                <a href="#" id="toggle-mode" style="color: var(--text-tertiary);">Don't have an account? Create one</a>
+            </p>
         </div>
     </main>
 
@@ -41,25 +41,33 @@
 
             const form = document.getElementById("auth-form");
             const title = document.getElementById("form-title");
-            const subtitle = document.getElementById("form-subtitle");
             const submitBtn = document.getElementById("submit-btn");
             const errorEl = document.getElementById("auth-error");
             const passwordInput = document.getElementById("password");
+            const toggleLink = document.getElementById("toggle-mode");
 
             let isRegister = false;
+
+            const applyMode = () => {
+                title.textContent = isRegister ? "Create Account" : "Sign In";
+                submitBtn.textContent = isRegister ? "Create Account" : "Sign In";
+                passwordInput.autocomplete = isRegister ? "new-password" : "current-password";
+                passwordInput.placeholder = isRegister ? "Password (min. 8 characters)" : "Password";
+                toggleLink.textContent = isRegister ? "Already have an account? Sign in" : "Don't have an account? Create one";
+                errorEl.style.display = "none";
+            };
+
+            toggleLink.addEventListener("click", (e) => {
+                e.preventDefault();
+                isRegister = !isRegister;
+                applyMode();
+            });
+
             try {
                 const me = await fetch('/api/auth/me').then(r => r.json());
                 if (me.authenticated) {
                     location.href = '/letter.html';
                     return;
-                }
-                if (me.registrationOpen) {
-                    isRegister = true;
-                    title.textContent = "Create Account";
-                    subtitle.style.display = "block";
-                    submitBtn.textContent = "Create Account";
-                    passwordInput.autocomplete = "new-password";
-                    passwordInput.placeholder = "Password (min. 8 characters)";
                 }
             } catch (err) {
                 // If /api/auth/me fails, just fall back to a normal login form.
