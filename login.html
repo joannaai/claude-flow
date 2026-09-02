@@ -17,6 +17,7 @@
             <form class="contact-form" id="auth-form">
                 <input type="text" id="username" placeholder="Username" required class="form-input full-width" autocomplete="username">
                 <input type="password" id="password" placeholder="Password" required class="form-input full-width" autocomplete="current-password">
+                <input type="password" id="confirm-password" placeholder="Confirm Password" class="form-input full-width" autocomplete="new-password" style="display:none;">
                 <button type="submit" class="submit-btn" id="submit-btn">Sign In</button>
             </form>
             <p id="auth-error" style="color:#c0392b; margin-top:1rem; display:none;"></p>
@@ -44,6 +45,7 @@
             const submitBtn = document.getElementById("submit-btn");
             const errorEl = document.getElementById("auth-error");
             const passwordInput = document.getElementById("password");
+            const confirmInput = document.getElementById("confirm-password");
             const toggleLink = document.getElementById("toggle-mode");
 
             let isRegister = false;
@@ -53,6 +55,9 @@
                 submitBtn.textContent = isRegister ? "Create Account" : "Sign In";
                 passwordInput.autocomplete = isRegister ? "new-password" : "current-password";
                 passwordInput.placeholder = isRegister ? "Password (min. 8 characters)" : "Password";
+                confirmInput.style.display = isRegister ? "block" : "none";
+                confirmInput.required = isRegister;
+                if (!isRegister) confirmInput.value = "";
                 toggleLink.textContent = isRegister ? "Already have an account? Sign in" : "Don't have an account? Create one";
                 errorEl.style.display = "none";
             };
@@ -76,6 +81,13 @@
             form.addEventListener("submit", async (e) => {
                 e.preventDefault();
                 errorEl.style.display = "none";
+
+                if (isRegister && passwordInput.value !== confirmInput.value) {
+                    errorEl.textContent = "Passwords do not match.";
+                    errorEl.style.display = "block";
+                    return;
+                }
+
                 submitBtn.disabled = true;
 
                 try {
