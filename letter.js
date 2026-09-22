@@ -32,6 +32,8 @@ function setupLocalNavigation() {
 
             if (section === "letter-history") {
                 loadLetterHistory();
+            } else if (section === "manage-users") {
+                loadUsers();
             }
         });
     });
@@ -545,6 +547,124 @@ async function loadLetterHistory() {
     }
 }
 
+async function loadUsers() {
+    const container = document.getElementById("users-list");
+    container.innerHTML = `<p style="color: var(--text-tertiary); text-align:center; padding:2rem;">Loading…</p>`;
+
+    try {
+        const [users, me] = await Promise.all([
+            fetch('/api/auth/users').then(async r => { if (!r.ok) throw new Error((await r.json()).error || 'Server error'); return r.json(); }),
+            fetch('/api/auth/me').then(r => r.json()),
+        ]);
+
+        const fmtDate = iso => new Date(iso).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+
+        container.innerHTML = `
+            <div style="overflow-x:auto;">
+                <table style="width:100%; border-collapse:collapse;">
+                    <thead>
+                        <tr style="text-align:left; border-bottom:2px solid var(--border-color, #999);">
+                            <th style="padding:0.6rem 0.5rem;">Username</th>
+                            <th style="padding:0.6rem 0.5rem;">Created</th>
+                            <th style="padding:0.6rem 0.5rem;"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${users.map(u => `
+                            <tr style="border-bottom:1px solid var(--border-color, #ddd);">
+                                <td style="padding:0.6rem 0.5rem;">${escapeLetterHtml(u.username)}${u.username === me.username ? ' <span style="color: var(--text-tertiary); font-size:0.8rem;">(you)</span>' : ''}</td>
+                                <td style="padding:0.6rem 0.5rem; white-space:nowrap;">${escapeLetterHtml(fmtDate(u.created_at))}</td>
+                                <td style="padding:0.6rem 0.5rem; text-align:right;">
+                                    <button class="submit-btn set-password-btn" data-id="${u.id}" data-username="${escapeLetterHtml(u.username)}" style="padding:0.35rem 0.8rem; font-size:0.8rem; margin-right:0.4rem;">Set Password</button>
+                                    <button class="submit-btn delete-user-btn" data-id="${u.id}" data-username="${escapeLetterHtml(u.username)}" style="background:#c0392b; padding:0.35rem 0.8rem; font-size:0.8rem;">Delete</button>
+                                </td>
+                            </tr>
+                        `).join("")}
+                    </tbody>
+                </table>
+            </div>
+        `;
+
+        container.querySelectorAll(".set-password-btn").forEach(btn => {
+            btn.addEventListener("click", async () => {
+                const password = prompt(`New password for "${btn.dataset.username}" (min. 8 characters):`);
+                if (password === null) return;
+                if (password.length < 8) return alert('Password must be at least 8 characters');
+
+                btn.disabled = true;
+                try {
+                    const response = await fetch(`/api/auth/users/${btn.dataset.id}/password`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ password }),
+                    });
+                    const data = await response.json();
+                    if (!response.ok) throw new Error(data.error || 'Server error');
+                    alert(`Password updated for "${btn.dataset.username}".`);
+                } catch (err) {
+                    alert('Could not update password: ' + err.message);
+                } finally {
+                    btn.disabled = false;
+                }
+            });
+        });
+
+        container.querySelectorAll(".delete-user-btn").forEach(btn => {
+            btn.addEventListener("click", async () => {
+                const id = btn.dataset.id;
+                const username = btn.dataset.username;
+                if (!confirm(`Delete user "${username}"? This cannot be undone.`)) return;
+
+                btn.disabled = true;
+                try {
+                    const response = await fetch(`/api/auth/users/${id}`, { method: 'DELETE' });
+                    const data = await response.json();
+                    if (!response.ok) throw new Error(data.error || 'Server error');
+
+                    if (data.deletedSelf) {
+                        alert("You deleted your own account — you'll be signed out now.");
+                        location.href = '/';
+                        return;
+                    }
+                    loadUsers();
+                } catch (err) {
+                    alert('Could not delete user: ' + err.message);
+                    btn.disabled = false;
+                }
+            });
+        });
+    } catch (err) {
+        container.innerHTML = `<p style="color:#c0392b; text-align:center; padding:2rem;">Could not load users: ${escapeLetterHtml(err.message)}</p>`;
+    }
+}
+
+function setupAddUser() {
+    const form = document.getElementById("add-user-form");
+    form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const submitBtn = form.querySelector("button[type=submit]");
+        submitBtn.disabled = true;
+        try {
+            const response = await fetch('/api/auth/users', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: document.getElementById("new-user-username").value,
+                    password: document.getElementById("new-user-password").value,
+                }),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'Server error');
+            form.reset();
+            loadUsers();
+        } catch (err) {
+            alert('Could not add user: ' + err.message);
+        } finally {
+            submitBtn.disabled = false;
+        }
+    });
+}
+
 function setupLogout() {
     document.getElementById("logout-btn").addEventListener("click", async () => {
         await fetch('/api/auth/logout', { method: 'POST' });
@@ -556,5 +676,6 @@ document.addEventListener("DOMContentLoaded", () => {
     setupTheme();
     setupLocalNavigation();
     setupLetterForm();
+    setupAddUser();
     setupLogout();
 });

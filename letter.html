@@ -17,7 +17,10 @@
         <section id="letter" class="section active">
             <div class="section-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
                 <h2>Tenant Notices &amp; Letters</h2>
-                <a href="#letter-history" class="nav-tab" data-section="letter-history" style="position:static; padding:0.4rem 0.9rem; border-radius:6px; background:var(--bg-secondary); font-size:0.85rem; white-space:nowrap;">📜 Letter History</a>
+                <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                    <a href="#manage-users" class="nav-tab" data-section="manage-users" style="position:static; padding:0.4rem 0.9rem; border-radius:6px; background:var(--bg-secondary); font-size:0.85rem; white-space:nowrap;">👤 Manage Users</a>
+                    <a href="#letter-history" class="nav-tab" data-section="letter-history" style="position:static; padding:0.4rem 0.9rem; border-radius:6px; background:var(--bg-secondary); font-size:0.85rem; white-space:nowrap;">📜 Letter History</a>
+                </div>
             </div>
             <div class="about-box" id="letter-form-box">
                 <div class="form-row" style="align-items:center; margin-bottom:1rem;">
@@ -161,6 +164,24 @@
             </div>
             <div class="about-box">
                 <div id="letter-history-list">
+                    <p style="color: var(--text-tertiary); text-align:center; padding:2rem;">Loading…</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Manage Users Section -->
+        <section id="manage-users" class="section">
+            <div class="section-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+                <h2>Manage Users</h2>
+                <a href="#letter" class="nav-tab" data-section="letter" style="position:static; padding:0.4rem 0.9rem; border-radius:6px; background:var(--bg-secondary); font-size:0.85rem; white-space:nowrap;">← Back to Notices</a>
+            </div>
+            <div class="about-box">
+                <form id="add-user-form" style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center; margin-bottom:1.25rem;">
+                    <input type="text" id="new-user-username" placeholder="Username (email)" required class="form-input" style="flex:1 1 180px;" autocomplete="off">
+                    <input type="password" id="new-user-password" placeholder="Password (min. 8 characters)" required minlength="8" class="form-input" style="flex:1 1 180px;" autocomplete="new-password">
+                    <button type="submit" class="submit-btn" style="padding:0.5rem 1rem;">Add User</button>
+                </form>
+                <div id="users-list">
                     <p style="color: var(--text-tertiary); text-align:center; padding:2rem;">Loading…</p>
                 </div>
             </div>

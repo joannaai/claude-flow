@@ -21,8 +21,13 @@
                 <button type="submit" class="submit-btn" id="submit-btn">Sign In</button>
             </form>
             <p id="auth-error" style="color:#c0392b; margin-top:1rem; display:none;"></p>
+            <button type="button" class="submit-btn" id="reset-btn" style="display:none; margin-top:0.75rem; width:100%;">Reset password</button>
+            <p id="auth-info" style="color:#27ae60; margin-top:1rem; display:none;"></p>
             <p style="text-align:center; margin-top:1rem; font-size:0.85rem;">
                 <a href="#" id="toggle-mode" style="color: var(--text-tertiary);">Don't have an account? Create one</a>
+            </p>
+            <p style="text-align:center; margin-top:0.5rem; font-size:0.85rem;">
+                <a href="#" id="forgot-link" style="color: var(--text-tertiary);">Forgot password?</a>
             </p>
         </div>
     </main>
@@ -48,29 +53,63 @@
             const confirmInput = document.getElementById("confirm-password");
             const toggleLink = document.getElementById("toggle-mode");
 
-            let isRegister = false;
+            const infoEl = document.getElementById("auth-info");
+            const usernameInput = document.getElementById("username");
+            const forgotLink = document.getElementById("forgot-link");
+            const resetBtn = document.getElementById("reset-btn");
+            const resetToken = new URLSearchParams(location.search).get("reset");
+
+            // signin | register | forgot | reset
+            let mode = resetToken ? "reset" : "signin";
 
             const applyMode = () => {
-                title.textContent = isRegister ? "Create Account" : "Sign In";
-                submitBtn.textContent = isRegister ? "Create Account" : "Sign In";
-                passwordInput.autocomplete = isRegister ? "new-password" : "current-password";
-                passwordInput.placeholder = isRegister ? "Password (min. 8 characters)" : "Password";
-                confirmInput.style.display = isRegister ? "block" : "none";
-                confirmInput.required = isRegister;
-                if (!isRegister) confirmInput.value = "";
-                toggleLink.textContent = isRegister ? "Already have an account? Sign in" : "Don't have an account? Create one";
+                const isRegister = mode === "register";
+                const isForgot = mode === "forgot";
+                const isReset = mode === "reset";
+                const needsConfirm = isRegister || isReset;
+
+                title.textContent = { signin: "Sign In", register: "Create Account", forgot: "Reset Password", reset: "Choose a New Password" }[mode];
+                submitBtn.textContent = { signin: "Sign In", register: "Create Account", forgot: "Send Reset Link", reset: "Update Password" }[mode];
+                usernameInput.style.display = isReset ? "none" : "block";
+                usernameInput.required = !isReset;
+                usernameInput.placeholder = isForgot ? "Your username (email address)" : "Username";
+                passwordInput.style.display = isForgot ? "none" : "block";
+                passwordInput.required = !isForgot;
+                passwordInput.autocomplete = needsConfirm ? "new-password" : "current-password";
+                passwordInput.placeholder = needsConfirm ? "Password (min. 8 characters)" : "Password";
+                confirmInput.style.display = needsConfirm ? "block" : "none";
+                confirmInput.required = needsConfirm;
+                if (!needsConfirm) confirmInput.value = "";
+                toggleLink.textContent = isRegister ? "Already have an account? Sign in"
+                    : (isForgot || isReset) ? "Back to sign in" : "Don't have an account? Create one";
+                forgotLink.style.display = mode === "signin" ? "inline" : "none";
                 errorEl.style.display = "none";
+                infoEl.style.display = "none";
+                resetBtn.style.display = "none";
             };
 
             toggleLink.addEventListener("click", (e) => {
                 e.preventDefault();
-                isRegister = !isRegister;
+                mode = mode === "signin" ? "register" : "signin";
+                if (resetToken) history.replaceState(null, "", location.pathname);
                 applyMode();
             });
 
+            const openForgot = () => {
+                mode = "forgot";
+                applyMode();
+            };
+            forgotLink.addEventListener("click", (e) => {
+                e.preventDefault();
+                openForgot();
+            });
+            resetBtn.addEventListener("click", openForgot);
+
+            applyMode();
+
             try {
                 const me = await fetch('/api/auth/me').then(r => r.json());
-                if (me.authenticated) {
+                if (me.authenticated && !resetToken) {
                     location.href = '/letter.html';
                     return;
                 }
@@ -81,8 +120,10 @@
             form.addEventListener("submit", async (e) => {
                 e.preventDefault();
                 errorEl.style.display = "none";
+                infoEl.style.display = "none";
+                resetBtn.style.display = "none";
 
-                if (isRegister && passwordInput.value !== confirmInput.value) {
+                if ((mode === "register" || mode === "reset") && passwordInput.value !== confirmInput.value) {
                     errorEl.textContent = "Passwords do not match.";
                     errorEl.style.display = "block";
                     return;
@@ -91,17 +132,36 @@
                 submitBtn.disabled = true;
 
                 try {
-                    const response = await fetch(isRegister ? '/api/auth/register' : '/api/auth/login', {
+                    const endpoint = { signin: '/api/auth/login', register: '/api/auth/register', forgot: '/api/auth/forgot', reset: '/api/auth/reset' }[mode];
+                    const body = mode === "forgot" ? { username: usernameInput.value }
+                        : mode === "reset" ? { token: resetToken, password: passwordInput.value }
+                        : { username: usernameInput.value, password: passwordInput.value };
+                    const response = await fetch(endpoint, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            username: document.getElementById("username").value,
-                            password: document.getElementById("password").value,
-                        }),
+                        body: JSON.stringify(body),
                     });
                     const data = await response.json();
-                    if (!response.ok) throw new Error(data.error || 'Something went wrong');
-                    location.href = '/letter.html';
+                    if (!response.ok) {
+                        if (mode === "signin" && response.status === 401) resetBtn.style.display = "block";
+                        throw new Error(data.error || 'Something went wrong');
+                    }
+
+                    if (mode === "forgot") {
+                        infoEl.textContent = "If that account exists and its username is an email address, a reset link is on its way.";
+                        infoEl.style.display = "block";
+                        submitBtn.disabled = false;
+                    } else if (mode === "reset") {
+                        history.replaceState(null, "", location.pathname);
+                        mode = "signin";
+                        passwordInput.value = "";
+                        applyMode();
+                        infoEl.textContent = "Password updated. Sign in with your new password.";
+                        infoEl.style.display = "block";
+                        submitBtn.disabled = false;
+                    } else {
+                        location.href = '/letter.html';
+                    }
                 } catch (err) {
                     errorEl.textContent = err.message;
                     errorEl.style.display = "block";

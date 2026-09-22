@@ -3,6 +3,7 @@ const express    = require('express');
 const cors       = require('cors');
 const https      = require('https');
 const path       = require('path');
+const crypto     = require('crypto');
 const fs         = require('fs');
 const { PDFDocument, StandardFonts } = require('pdf-lib');
 const { Resend } = require('resend');
@@ -74,8 +75,141 @@ app.post('/api/auth/login', async (req, res) => {
     }
 });
 
+// Passwords are bcrypt-hashed and can't be retrieved, so "forgot password" emails a
+// one-hour, single-use reset link. The link goes to the username, so it only works
+// for accounts whose username is an email address.
+const RESET_TTL_MS = 60 * 60 * 1000;
+const RESET_COOLDOWN_MS = 60 * 1000;
+const lastResetRequest = new Map();
+const hashToken = token => crypto.createHash('sha256').update(token).digest('hex');
+
+app.post('/api/auth/forgot', async (req, res) => {
+    // Always answer the same way so this can't be used to discover which usernames exist.
+    const reply = () => res.json({ success: true });
+    try {
+        const username = String(req.body.username || '').trim();
+        if (!username) return res.status(400).json({ error: 'Username required' });
+
+        const last = lastResetRequest.get(username) || 0;
+        if (Date.now() - last < RESET_COOLDOWN_MS) return reply();
+        lastResetRequest.set(username, Date.now());
+
+        const result = await pool.query('SELECT id FROM users WHERE username = $1', [username]);
+        if (!result.rows.length || !username.includes('@')) return reply();
+
+        const token = crypto.randomBytes(32).toString('hex');
+        await pool.query('DELETE FROM password_resets WHERE user_id = $1', [result.rows[0].id]);
+        await pool.query(
+            'INSERT INTO password_resets (token_hash, user_id, expires_at) VALUES ($1,$2,$3)',
+            [hashToken(token), result.rows[0].id, new Date(Date.now() + RESET_TTL_MS)]
+        );
+
+        // Build the link from a fixed origin, not the Host header, so it can't be spoofed.
+        const baseUrl = process.env.PUBLIC_BASE_URL ||
+            (req.hostname === 'localhost' ? `http://localhost:${PORT}` : `https://${LETTER_SITE_HOSTNAMES[0]}`);
+        const link = `${baseUrl}/login.html?reset=${token}`;
+
+        const resend = new Resend(process.env.RESEND_API_KEY);
+        const { error } = await resend.emails.send({
+            from: `Aico LLC <${process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'}>`,
+            to: [username],
+            subject: 'Reset your password',
+            text: `Use this link to choose a new password. It expires in 1 hour.\n\n${link}\n\nIf you didn't ask for this, you can ignore this email.`,
+        });
+        if (error) throw new Error(error.message || 'Resend failed to send the email');
+        reply();
+    } catch (e) {
+        console.error('Password reset request failed:', e.message);
+        reply();
+    }
+});
+
+app.post('/api/auth/reset', async (req, res) => {
+    try {
+        const { token, password } = req.body;
+        if (!token || !password) return res.status(400).json({ error: 'Token and password required' });
+        if (password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
+
+        const found = await pool.query(
+            'SELECT user_id FROM password_resets WHERE token_hash = $1 AND expires_at > NOW()',
+            [hashToken(String(token))]
+        );
+        if (!found.rows.length) return res.status(400).json({ error: 'This reset link is invalid or has expired' });
+
+        const userId = found.rows[0].user_id;
+        await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [await bcrypt.hash(password, 12), userId]);
+        await pool.query('DELETE FROM password_resets WHERE user_id = $1', [userId]);
+        res.json({ success: true });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 app.post('/api/auth/logout', (req, res) => {
     req.session.destroy(() => res.json({ success: true }));
+});
+
+app.get('/api/auth/users', async (req, res) => {
+    if (!(req.session && req.session.userId)) return res.status(401).json({ error: 'Not authenticated' });
+    try {
+        const result = await pool.query('SELECT id, username, created_at FROM users ORDER BY created_at ASC');
+        res.json(result.rows);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post('/api/auth/users', async (req, res) => {
+    if (!(req.session && req.session.userId)) return res.status(401).json({ error: 'Not authenticated' });
+    try {
+        const username = String(req.body.username || '').trim();
+        const { password } = req.body;
+        if (!username || !password) return res.status(400).json({ error: 'Username and password required' });
+        if (password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
+
+        const result = await pool.query(
+            'INSERT INTO users (username, password_hash) VALUES ($1,$2) RETURNING id, username, created_at',
+            [username, await bcrypt.hash(password, 12)]
+        );
+        res.json(result.rows[0]);
+    } catch (e) {
+        if (e.code === '23505') return res.status(409).json({ error: 'Username already taken' });
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.put('/api/auth/users/:id/password', async (req, res) => {
+    if (!(req.session && req.session.userId)) return res.status(401).json({ error: 'Not authenticated' });
+    try {
+        const id = parseInt(req.params.id, 10);
+        const { password } = req.body;
+        if (!password || password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
+
+        const result = await pool.query(
+            'UPDATE users SET password_hash = $1 WHERE id = $2',
+            [await bcrypt.hash(password, 12), id]
+        );
+        if (!result.rowCount) return res.status(404).json({ error: 'User not found' });
+        await pool.query('DELETE FROM password_resets WHERE user_id = $1', [id]);
+        res.json({ success: true });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.delete('/api/auth/users/:id', async (req, res) => {
+    if (!(req.session && req.session.userId)) return res.status(401).json({ error: 'Not authenticated' });
+    try {
+        const id = parseInt(req.params.id, 10);
+        await pool.query('DELETE FROM users WHERE id = $1', [id]);
+        const deletedSelf = req.session.userId === id;
+        if (deletedSelf) {
+            return req.session.destroy(() => res.json({ success: true, deletedSelf: true }));
+        }
+        res.json({ success: true, deletedSelf: false });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
 });
 
 app.get('/api/auth/me', (req, res) => {

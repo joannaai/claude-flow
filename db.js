@@ -50,6 +50,11 @@ async function init() {
             password_hash TEXT NOT NULL,
             created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
         );
+        CREATE TABLE IF NOT EXISTS password_resets (
+            token_hash TEXT PRIMARY KEY,
+            user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            expires_at TIMESTAMPTZ NOT NULL
+        );
         CREATE TABLE IF NOT EXISTS houses (
             zpid          BIGINT PRIMARY KEY,
             address       TEXT,
