@@ -494,11 +494,11 @@ app.get('/api/house-photo', (req, res) => {
 
 // Records a generated/sent notice so it shows up on the Letter History page.
 // Logging failures are swallowed — they should never block the actual send.
-async function logLetterHistory({ letterType, tenantName, tenantEmail, rentAmount, action }) {
+async function logLetterHistory({ letterType, tenantName, tenantEmail, rentAmount, action, sentBy }) {
     try {
         await pool.query(
-            'INSERT INTO letter_history (letter_type, tenant_name, tenant_email, rent_amount, action) VALUES ($1,$2,$3,$4,$5)',
-            [letterType, tenantName || null, tenantEmail || null, rentAmount ? Number(rentAmount) : null, action]
+            'INSERT INTO letter_history (letter_type, tenant_name, tenant_email, rent_amount, action, sent_by) VALUES ($1,$2,$3,$4,$5,$6)',
+            [letterType, tenantName || null, tenantEmail || null, rentAmount ? Number(rentAmount) : null, action, sentBy || null]
         );
     } catch (e) {
         console.error('Failed to log letter history:', e.message);
@@ -508,7 +508,7 @@ async function logLetterHistory({ letterType, tenantName, tenantEmail, rentAmoun
 app.get('/api/letter/history', async (req, res) => {
     try {
         const result = await pool.query(
-            'SELECT id, letter_type, tenant_name, tenant_email, rent_amount, action, created_at FROM letter_history ORDER BY created_at DESC LIMIT 200'
+            'SELECT id, letter_type, tenant_name, tenant_email, rent_amount, action, sent_by, created_at FROM letter_history ORDER BY created_at DESC LIMIT 200'
         );
         res.json(result.rows);
     } catch (e) {
@@ -831,6 +831,7 @@ app.post('/api/letter/va-notice-send', async (req, res) => {
             tenantEmail: d.tenantEmail,
             rentAmount: d.rentAmount,
             action: 'emailed',
+            sentBy: req.session && req.session.username,
         });
 
         res.json({ success: true, sentTo: d.tenantEmail });
@@ -880,6 +881,7 @@ app.post('/api/letter/md-notice-send', async (req, res) => {
             tenantEmail: d.tenantEmail,
             rentAmount: d.rentAmount,
             action: 'emailed',
+            sentBy: req.session && req.session.username,
         });
 
         res.json({ success: true, sentTo: d.tenantEmail });

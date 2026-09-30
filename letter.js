@@ -525,6 +525,7 @@ async function loadLetterHistory() {
                             <th style="padding:0.6rem 0.5rem;">Tenant Email</th>
                             <th style="padding:0.6rem 0.5rem;">Rent Amount</th>
                             <th style="padding:0.6rem 0.5rem;">Action</th>
+                            <th style="padding:0.6rem 0.5rem;">Sent By</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -536,6 +537,7 @@ async function loadLetterHistory() {
                                 <td style="padding:0.6rem 0.5rem;">${escapeLetterHtml(r.tenant_email || "—")}</td>
                                 <td style="padding:0.6rem 0.5rem;">${fmtAmount(r.rent_amount)}</td>
                                 <td style="padding:0.6rem 0.5rem; text-transform:capitalize;">${escapeLetterHtml(r.action)}</td>
+                                <td style="padding:0.6rem 0.5rem;">${escapeLetterHtml(r.sent_by || "—")}</td>
                             </tr>
                         `).join("")}
                     </tbody>

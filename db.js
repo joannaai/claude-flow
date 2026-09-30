@@ -42,8 +42,10 @@ async function init() {
             tenant_email TEXT,
             rent_amount  NUMERIC,
             action       TEXT NOT NULL,
+            sent_by      TEXT,
             created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
         );
+        ALTER TABLE letter_history ADD COLUMN IF NOT EXISTS sent_by TEXT;
         CREATE TABLE IF NOT EXISTS users (
             id            SERIAL PRIMARY KEY,
             username      TEXT NOT NULL UNIQUE,
