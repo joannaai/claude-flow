@@ -16,6 +16,11 @@ const app  = express();
 const PORT = process.env.PORT || 3000;
 const NOTICE_CC_EMAIL = 'aicomanagementllc@gmail.com';
 
+// Railway terminates HTTPS at its edge and forwards plain HTTP internally. Without this,
+// Express sees every request as insecure, so the session cookie's `secure: true` flag
+// below causes express-session to silently drop the cookie and logins never persist.
+app.set('trust proxy', 1);
+
 app.use(cors());
 app.use((req, res, next) => {
     // Allow the Zillow-page ingest script (public HTTPS origin) to reach this private/loopback server
