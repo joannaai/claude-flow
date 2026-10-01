@@ -516,17 +516,22 @@ async function loadLetterHistory() {
     container.innerHTML = `<p style="color: var(--text-tertiary); text-align:center; padding:2rem;">Loading…</p>`;
 
     try {
-        const response = await fetch('/api/letter/history');
+        const [response, me] = await Promise.all([
+            fetch('/api/letter/history'),
+            fetch('/api/auth/me').then(r => r.json()),
+        ]);
         if (!response.ok) throw new Error((await response.json()).error || 'Server error');
         const rows = await response.json();
 
         if (!rows.length) {
-            container.innerHTML = `<p style="color: var(--text-tertiary); text-align:center; padding:2rem;">No notices sent yet. Sent notices will show up here.</p>`;
+            container.innerHTML = `<p style="color: var(--text-tertiary); text-align:center; padding:2rem;">${me.isAdmin ? "No notices sent yet. Sent notices will show up here." : "You haven't sent any notices yet."}</p>`;
             return;
         }
 
         const fmtDate = iso => new Date(iso).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
         const fmtAmount = n => n === null || n === undefined ? "—" : "$" + Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        // Non-admins only ever see their own notices, so a "Sent By" column would be redundant.
+        const sentByCol = me.isAdmin ? `<th style="padding:0.6rem 0.5rem;">Sent By</th>` : "";
 
         container.innerHTML = `
             <div style="overflow-x:auto;">
@@ -539,7 +544,7 @@ async function loadLetterHistory() {
                             <th style="padding:0.6rem 0.5rem;">Tenant Email</th>
                             <th style="padding:0.6rem 0.5rem;">Rent Amount</th>
                             <th style="padding:0.6rem 0.5rem;">Action</th>
-                            <th style="padding:0.6rem 0.5rem;">Sent By</th>
+                            ${sentByCol}
                         </tr>
                     </thead>
                     <tbody>
@@ -551,7 +556,7 @@ async function loadLetterHistory() {
                                 <td style="padding:0.6rem 0.5rem;">${escapeLetterHtml(r.tenant_email || "—")}</td>
                                 <td style="padding:0.6rem 0.5rem;">${fmtAmount(r.rent_amount)}</td>
                                 <td style="padding:0.6rem 0.5rem; text-transform:capitalize;">${escapeLetterHtml(r.action)}</td>
-                                <td style="padding:0.6rem 0.5rem;">${escapeLetterHtml(r.sent_by || "—")}</td>
+                                ${me.isAdmin ? `<td style="padding:0.6rem 0.5rem;">${escapeLetterHtml(r.sent_by || "—")}</td>` : ""}
                             </tr>
                         `).join("")}
                     </tbody>

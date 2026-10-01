@@ -519,11 +519,18 @@ async function logLetterHistory({ letterType, tenantName, tenantEmail, rentAmoun
     }
 }
 
+// Admins see every notice ever sent; everyone else only sees notices they sent themselves.
 app.get('/api/letter/history', async (req, res) => {
+    if (!(req.session && req.session.userId)) return res.status(401).json({ error: 'Not authenticated' });
     try {
-        const result = await pool.query(
-            'SELECT id, letter_type, tenant_name, tenant_email, rent_amount, action, sent_by, created_at FROM letter_history ORDER BY created_at DESC LIMIT 200'
-        );
+        const result = isAdmin(req)
+            ? await pool.query(
+                'SELECT id, letter_type, tenant_name, tenant_email, rent_amount, action, sent_by, created_at FROM letter_history ORDER BY created_at DESC LIMIT 200'
+              )
+            : await pool.query(
+                'SELECT id, letter_type, tenant_name, tenant_email, rent_amount, action, sent_by, created_at FROM letter_history WHERE sent_by = $1 ORDER BY created_at DESC LIMIT 200',
+                [req.session.username]
+              );
         res.json(result.rows);
     } catch (e) {
         res.status(500).json({ error: e.message });
