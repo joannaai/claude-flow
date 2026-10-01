@@ -154,8 +154,14 @@ app.post('/api/auth/logout', (req, res) => {
     req.session.destroy(() => res.json({ success: true }));
 });
 
+// Only these accounts can manage other users. Add more usernames here as needed.
+const ADMIN_USERNAMES = ['aicomanagementllc@gmail.com', 'joannaaihoa2@gmail.com'];
+const isAdmin = req => !!(req.session && req.session.username &&
+    ADMIN_USERNAMES.includes(req.session.username.toLowerCase()));
+
 app.get('/api/auth/users', async (req, res) => {
     if (!(req.session && req.session.userId)) return res.status(401).json({ error: 'Not authenticated' });
+    if (!isAdmin(req)) return res.status(403).json({ error: 'Not authorized to manage users' });
     try {
         const result = await pool.query('SELECT id, username, created_at FROM users ORDER BY created_at ASC');
         res.json(result.rows);
@@ -166,6 +172,7 @@ app.get('/api/auth/users', async (req, res) => {
 
 app.post('/api/auth/users', async (req, res) => {
     if (!(req.session && req.session.userId)) return res.status(401).json({ error: 'Not authenticated' });
+    if (!isAdmin(req)) return res.status(403).json({ error: 'Not authorized to manage users' });
     try {
         const username = String(req.body.username || '').trim();
         const { password } = req.body;
@@ -185,6 +192,7 @@ app.post('/api/auth/users', async (req, res) => {
 
 app.put('/api/auth/users/:id/password', async (req, res) => {
     if (!(req.session && req.session.userId)) return res.status(401).json({ error: 'Not authenticated' });
+    if (!isAdmin(req)) return res.status(403).json({ error: 'Not authorized to manage users' });
     try {
         const id = parseInt(req.params.id, 10);
         const { password } = req.body;
@@ -204,6 +212,7 @@ app.put('/api/auth/users/:id/password', async (req, res) => {
 
 app.delete('/api/auth/users/:id', async (req, res) => {
     if (!(req.session && req.session.userId)) return res.status(401).json({ error: 'Not authenticated' });
+    if (!isAdmin(req)) return res.status(403).json({ error: 'Not authorized to manage users' });
     try {
         const id = parseInt(req.params.id, 10);
         await pool.query('DELETE FROM users WHERE id = $1', [id]);
@@ -219,7 +228,7 @@ app.delete('/api/auth/users/:id', async (req, res) => {
 
 app.get('/api/auth/me', (req, res) => {
     if (req.session && req.session.userId) {
-        return res.json({ authenticated: true, username: req.session.username });
+        return res.json({ authenticated: true, username: req.session.username, isAdmin: isAdmin(req) });
     }
     res.json({ authenticated: false });
 });

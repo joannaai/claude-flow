@@ -39,6 +39,20 @@ function setupLocalNavigation() {
     });
 }
 
+// Only admins (checked server-side on every /api/auth/users* call) can manage users.
+// Hiding the tab here is just UX — if a non-admin navigates to #manage-users directly,
+// loadUsers() below still hits the 403 from the server and shows an error instead of data.
+async function setupAdminVisibility() {
+    try {
+        const me = await fetch('/api/auth/me').then(r => r.json());
+        if (!me.isAdmin) {
+            document.querySelector('.nav-tab[data-section="manage-users"]').style.display = "none";
+        }
+    } catch (err) {
+        // If this fails, loadUsers()'s own auth check still protects the data.
+    }
+}
+
 function escapeLetterHtml(str) {
     const div = document.createElement("div");
     div.textContent = str;
@@ -680,4 +694,5 @@ document.addEventListener("DOMContentLoaded", () => {
     setupLetterForm();
     setupAddUser();
     setupLogout();
+    setupAdminVisibility();
 });
